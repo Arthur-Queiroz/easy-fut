@@ -74,5 +74,5 @@ jobs:
             docker network inspect fut-app >/dev/null 2>&1 || docker network create fut-app
             docker compose up -d --build --remove-orphans
             docker compose ps
-            curl --fail --retry 5 --retry-connrefused -I http://127.0.0.1:8085/
+            curl --fail --retry 5 --retry-connrefused -I http://127.0.0.1:8087/
           '
