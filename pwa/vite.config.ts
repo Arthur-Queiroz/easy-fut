@@ -1,0 +1,35 @@
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import { VitePWA } from 'vite-plugin-pwa'
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      manifest: {
+        name: 'Fut da Rapaziada',
+        short_name: 'Fut',
+        description: 'Gestão de partidas e mensalidades do grupo',
+        theme_color: '#0A3B28',
+        background_color: '#0A3B28',
+        display: 'standalone',
+        lang: 'pt-BR',
+        icons: [
+          { src: '/icons/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        ],
+      },
+      workbox: {
+        // A API nunca deve ser servida do cache offline.
+        navigateFallbackDenylist: [/^\/api\//],
+      },
+    }),
+  ],
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': 'http://localhost:8080',
+    },
+  },
+})

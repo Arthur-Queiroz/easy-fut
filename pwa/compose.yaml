@@ -1,0 +1,36 @@
+name: fut-app-pwa
+
+services:
+  frontend-build:
+    build: .
+    command: sh -c "rm -rf /out/* && cp -r /dist/. /out/"
+    volumes:
+      - frontend-dist:/out
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      frontend-build:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8085:80"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - frontend-dist:/srv:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - fut-app
+
+volumes:
+  frontend-dist:
+  caddy-data:
+  caddy-config:
+
+networks:
+  fut-app:
+    external: true
+    name: fut-app

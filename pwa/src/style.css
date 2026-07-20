@@ -1,0 +1,58 @@
+@import '@fontsource/barlow/400.css';
+@import '@fontsource/barlow/500.css';
+@import '@fontsource/barlow/600.css';
+@import '@fontsource/barlow/700.css';
+@import '@fontsource/barlow-condensed/500.css';
+@import '@fontsource/barlow-condensed/600.css';
+@import '@fontsource/barlow-condensed/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tokens do mockup (Fut da Rapaziada.dc.html) — pares claro/escuro. */
+:root {
+  --canvas: #e6ede7;
+  --bg: #f3f6f3;
+  --surface: #ffffff;
+  --surface2: #ecf2ed;
+  --border: #dbe4dc;
+  --ink: #15231b;
+  --ink2: #576b5f;
+  --ink3: #8ca094;
+  --brand: #0e9455;
+  --brand-ink: #ffffff;
+  --brand-soft: #dff2e7;
+  --warn: #b45309;
+  --warn-bg: #fcf0db;
+  --danger: #c43030;
+  --danger-bg: #fbe9e9;
+  --info: #2563eb;
+  --info-bg: #e5edfc;
+  --shadow: 0 1px 2px rgba(10, 40, 25, 0.06), 0 4px 14px rgba(10, 40, 25, 0.08);
+}
+
+.dark {
+  --canvas: #0a120e;
+  --bg: #101b15;
+  --surface: #17251d;
+  --surface2: #1e3126;
+  --border: #2a3e32;
+  --ink: #edf5ef;
+  --ink2: #a6baae;
+  --ink3: #71877a;
+  --brand: #34ce81;
+  --brand-ink: #06281a;
+  --brand-soft: #17392a;
+  --warn: #f0a93b;
+  --warn-bg: #382b13;
+  --danger: #f17070;
+  --danger-bg: #3c1b1b;
+  --info: #6ea8ff;
+  --info-bg: #1b2c4a;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+body {
+  @apply bg-bg font-sans text-ink antialiased;
+}
