@@ -86,7 +86,7 @@ async function save() {
         <div class="text-[13px] font-semibold text-info">Pendentes de integração</div>
         <ul class="mt-2 list-inside list-disc text-[12.5px] leading-relaxed text-ink2">
           <li>Geração automática do código PIX: aguardando a definição do provedor (BR Code próprio ou gateway).</li>
-          <li>Envio de WhatsApp: os lembretes são agendados e registrados, mas ainda saem só no log do servidor.</li>
+          <li>WhatsApp: o administrador abre um lembrete personalizado pelo app, sem QR Code e sem envio automático.</li>
           <li>Feriados não entram no cálculo dos dias úteis — apenas fins de semana.</li>
         </ul>
       </Card>

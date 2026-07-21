@@ -22,6 +22,8 @@ const nextMonth = ref(currentMonth(1))
 const totalInput = ref('')
 const error = ref('')
 const generating = ref(false)
+const actionError = ref('')
+const remindingChargeID = ref('')
 
 onMounted(async () => {
   await Promise.all([load(), loadDefaults()])
@@ -91,6 +93,20 @@ async function markPaid(charge: Charge) {
   await api.post(`/admin/charges/${charge.id}/mark-paid`, { method: 'manual' })
   menuFor.value = ''
   await load()
+}
+
+async function sendWhatsAppReminder(charge: Charge) {
+  actionError.value = ''
+  remindingChargeID.value = charge.id
+  try {
+    const { data } = await api.post<{ url: string }>(`/admin/charges/${charge.id}/whatsapp-reminder`)
+    window.open(data.url, '_blank', 'noopener')
+    menuFor.value = ''
+  } catch (e) {
+    actionError.value = errorMessage(e)
+  } finally {
+    remindingChargeID.value = ''
+  }
 }
 
 async function exempt(charge: Charge) {
@@ -227,7 +243,7 @@ const monthOptions = computed(() => {
             Gerar {{ activeUsers }} cobranças
           </BaseButton>
           <p class="mt-2.5 text-[11.5px] leading-relaxed text-ink3">
-            O vencimento é calculado automaticamente no 5º dia útil, e o lembrete de WhatsApp é agendado um dia útil antes.
+            O vencimento é calculado automaticamente no 5º dia útil. Os lembretes são enviados manualmente pelo WhatsApp, sem custo ou QR Code.
           </p>
         </Card>
       </div>
@@ -243,6 +259,9 @@ const monthOptions = computed(() => {
           <Badge tone="success">{{ paidCount }} pagas</Badge>
           <Badge tone="warn">{{ pendingCount }} aguardando</Badge>
         </div>
+        <p v-if="actionError" class="border-b border-danger/20 bg-dangerBg px-5 py-3 text-[13px] font-medium text-danger">
+          {{ actionError }}
+        </p>
 
         <div class="overflow-x-auto">
           <table class="w-full min-w-[620px] text-left">
@@ -292,6 +311,14 @@ const monthOptions = computed(() => {
                 </td>
                 <td class="whitespace-nowrap px-5 py-2.5 text-right">
                   <div v-if="charge.status === 'pending' || charge.status === 'overdue'" class="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      class="text-[12.5px] font-semibold text-info disabled:opacity-50"
+                      :disabled="remindingChargeID === charge.id"
+                      @click="sendWhatsAppReminder(charge)"
+                    >
+                      {{ remindingChargeID === charge.id ? 'Abrindo...' : 'WhatsApp' }}
+                    </button>
                     <button type="button" class="text-[12.5px] font-semibold text-brand" @click="markPaid(charge)">
                       Registrar pagamento
                     </button>
