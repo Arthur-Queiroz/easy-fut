@@ -28,7 +28,7 @@ async function submit() {
       <p class="mt-2 text-sm text-white/70">Informe seu e-mail para receber um link de redefini&ccedil;&atilde;o.</p>
       <label v-if="!sent" class="mt-6 flex flex-col gap-1.5">
         <span class="text-sm font-semibold">E-mail</span>
-        <input v-model="email" required type="email" autocomplete="email" class="input" placeholder="voce@email.com" />
+        <input v-model="email" required type="email" autocomplete="email" class="h-[50px] rounded-xl border border-white/15 bg-white/5 px-4 text-[15px] text-white outline-none placeholder:text-white/40 focus:border-lime md:border-border md:bg-bg md:text-ink md:placeholder:text-ink3 md:focus:border-brand" placeholder="voce@email.com" />
       </label>
       <p v-if="sent" class="mt-6 rounded-xl bg-white/10 p-4 text-sm text-white/80">
         Se existir uma conta com esse e-mail, voc&ecirc; receber&aacute; um link em alguns minutos.
