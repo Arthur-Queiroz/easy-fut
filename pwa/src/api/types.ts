@@ -106,6 +106,8 @@ export interface Charge {
   paid_method: string
   registered_by_name?: string
   pix_payload: string
+  pix_ticket_url: string
+  pix_qr_code_base64: string
 }
 
 export interface ChargeBatch {

@@ -12,11 +12,26 @@ import SectionLabel from '../../components/ui/SectionLabel.vue'
 
 const charges = ref<Charge[]>([])
 const copied = ref(false)
+const pixError = ref('')
 
 onMounted(async () => {
+  await loadCharges()
+})
+
+async function loadCharges() {
   const { data } = await api.get<Charge[]>('/charges/me')
   charges.value = data ?? []
-})
+
+  const charge = charges.value.find((item) => item.status === 'pending' || item.status === 'overdue')
+  if (!charge || charge.pix_payload) return
+
+  try {
+    const { data: pixCharge } = await api.post<Charge>(`/charges/${charge.id}/pix`)
+    charges.value = charges.value.map((item) => (item.id === pixCharge.id ? pixCharge : item))
+  } catch {
+    pixError.value = 'Não foi possível gerar o Pix agora. Tente atualizar a página.'
+  }
+}
 
 const current = computed(() => charges.value.find((c) => c.status === 'pending' || c.status === 'overdue') ?? null)
 const history = computed(() => charges.value.filter((c) => c !== current.value))
@@ -67,11 +82,13 @@ function statusBadge(charge: Charge): { tone: 'success' | 'warn' | 'danger' | 'n
           <div
             class="flex h-[124px] w-[124px] shrink-0 items-center justify-center rounded-[14px] border border-border bg-white p-2 text-center"
           >
-            <span v-if="!current.pix_payload" class="px-2 text-[11px] leading-snug text-[#8CA094]">
-              QR Code PIX em breve — combine o pagamento com o admin
-            </span>
-            <!-- QR renderizado quando a API passar a gerar o payload PIX -->
-            <NavIcon v-else name="pix" :size="72" class="text-[#15231B]" />
+            <img
+              v-if="current.pix_qr_code_base64"
+              :src="`data:image/jpeg;base64,${current.pix_qr_code_base64}`"
+              alt="QR Code para pagamento via Pix"
+              class="h-full w-full object-contain"
+            />
+            <span v-else class="px-2 text-[11px] leading-snug text-[#8CA094]">Gerando QR Code PIX…</span>
           </div>
           <div class="flex flex-1 flex-col gap-1">
             <div class="font-condensed text-[34px] font-bold leading-none">{{ formatCents(current.amount_cents) }}</div>
@@ -95,8 +112,17 @@ function statusBadge(charge: Charge): { tone: 'success' | 'warn' | 'danger' | 'n
           </button>
         </div>
         <div v-else class="mt-3.5 rounded-xl bg-infoBg px-3.5 py-3 text-[12.5px] leading-relaxed text-info">
-          A geração automática do código PIX ainda não está ativa. O administrador registra o pagamento manualmente.
+          {{ pixError || 'Gerando o código PIX…' }}
         </div>
+        <a
+          v-if="current.pix_ticket_url"
+          :href="current.pix_ticket_url"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="mt-3.5 inline-flex text-[12.5px] font-bold text-brand"
+        >
+          Abrir instruções de pagamento
+        </a>
       </Card>
 
       <Card v-else class="p-4">
