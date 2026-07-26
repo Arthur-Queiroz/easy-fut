@@ -8,6 +8,8 @@ export const router = createRouter({
     { path: '/convite/:token', name: 'invite', component: () => import('../views/auth/InviteView.vue'), meta: { public: true } },
     { path: '/cadastro/:token', name: 'signup', component: () => import('../views/auth/SignupView.vue'), meta: { public: true } },
     { path: '/login', name: 'login', component: () => import('../views/auth/LoginView.vue'), meta: { public: true } },
+    { path: '/esqueci-minha-senha', name: 'forgot-password', component: () => import('../views/auth/ForgotPasswordView.vue'), meta: { public: true } },
+    { path: '/redefinir-senha', name: 'reset-password', component: () => import('../views/auth/ResetPasswordView.vue'), meta: { public: true } },
     { path: '/bloqueado', name: 'blocked', component: () => import('../views/app/BlockedView.vue') },
 
     // Painel do usuário

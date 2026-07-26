@@ -66,6 +66,10 @@ async function submit() {
         />
       </label>
 
+      <router-link :to="{ name: 'forgot-password' }" class="-mt-1 text-right text-[13px] font-semibold text-lime md:text-brand">
+        Esqueceu sua senha?
+      </router-link>
+
       <p v-if="error" class="rounded-xl bg-white/10 px-4 py-3 text-[13px] font-medium text-[#ffb4b4] md:bg-dangerBg md:text-danger">{{ error }}</p>
 
       <button
