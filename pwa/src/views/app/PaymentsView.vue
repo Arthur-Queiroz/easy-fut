@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { api } from '../../api/client'
+import { api, errorMessage } from '../../api/client'
 import type { Charge } from '../../api/types'
 import { formatCents, formatDateShort, formatDMY, formatMonth } from '../../lib/format'
 import MobileShell from '../../components/layout/MobileShell.vue'
@@ -28,8 +28,8 @@ async function loadCharges() {
   try {
     const { data: pixCharge } = await api.post<Charge>(`/charges/${charge.id}/pix`)
     charges.value = charges.value.map((item) => (item.id === pixCharge.id ? pixCharge : item))
-  } catch {
-    pixError.value = 'Não foi possível gerar o Pix agora. Tente atualizar a página.'
+  } catch (error) {
+    pixError.value = errorMessage(error)
   }
 }
 
