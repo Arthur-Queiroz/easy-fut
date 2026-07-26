@@ -23,13 +23,13 @@ async function loadCharges() {
   charges.value = data ?? []
 
   const charge = charges.value.find((item) => item.status === 'pending' || item.status === 'overdue')
-  if (!charge || charge.pix_payload) return
+  if (!charge) return
 
   try {
     const { data: pixCharge } = await api.post<Charge>(`/charges/${charge.id}/pix`)
     charges.value = charges.value.map((item) => (item.id === pixCharge.id ? pixCharge : item))
   } catch (error) {
-    pixError.value = errorMessage(error)
+    if (!charge.pix_payload) pixError.value = errorMessage(error)
   }
 }
 
