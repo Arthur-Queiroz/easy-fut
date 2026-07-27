@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import InstallPrompt from './components/pwa/InstallPrompt.vue'
 import { useThemeStore } from './stores/theme'
 
 useThemeStore().apply()
@@ -6,4 +7,5 @@ useThemeStore().apply()
 
 <template>
   <router-view />
+  <InstallPrompt />
 </template>
