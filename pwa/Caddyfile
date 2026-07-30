@@ -3,7 +3,7 @@ http://{$DOMAIN:localhost} {
 	encode gzip zstd
 
 	handle /api/* {
-		reverse_proxy api:8080
+		reverse_proxy fut-app-api:8080
 	}
 
 	handle {
