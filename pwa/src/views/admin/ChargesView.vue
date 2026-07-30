@@ -9,6 +9,7 @@ import Avatar from '../../components/ui/Avatar.vue'
 import Badge from '../../components/ui/Badge.vue'
 import BaseButton from '../../components/ui/BaseButton.vue'
 import Card from '../../components/ui/Card.vue'
+import Modal from '../../components/ui/Modal.vue'
 import SectionLabel from '../../components/ui/SectionLabel.vue'
 
 const batch = ref<ChargeBatch | null>(null)
@@ -24,6 +25,8 @@ const error = ref('')
 const generating = ref(false)
 const actionError = ref('')
 const remindingChargeID = ref('')
+const reminderQueue = ref<Charge[]>([])
+const reminderIndex = ref(0)
 
 onMounted(async () => {
   await Promise.all([load(), loadDefaults()])
@@ -59,6 +62,10 @@ const individualCents = computed(() =>
 
 const paidCount = computed(() => charges.value.filter((c) => c.status === 'paid' || c.status === 'manual_paid').length)
 const pendingCount = computed(() => charges.value.filter((c) => c.status === 'pending' || c.status === 'overdue').length)
+const chargesAwaitingPayment = computed(() =>
+  charges.value.filter((charge) => charge.status === 'pending' || charge.status === 'overdue'),
+)
+const currentReminder = computed(() => reminderQueue.value[reminderIndex.value] ?? null)
 const collected = computed(() =>
   charges.value
     .filter((c) => c.status === 'paid' || c.status === 'manual_paid')
@@ -107,6 +114,25 @@ async function sendWhatsAppReminder(charge: Charge) {
   } finally {
     remindingChargeID.value = ''
   }
+}
+
+function startWhatsAppReminders() {
+  actionError.value = ''
+  reminderQueue.value = chargesAwaitingPayment.value
+  reminderIndex.value = 0
+}
+
+function closeWhatsAppReminders() {
+  reminderQueue.value = []
+  reminderIndex.value = 0
+}
+
+async function openNextWhatsAppReminder() {
+  const charge = currentReminder.value
+  if (!charge) return
+
+  await sendWhatsAppReminder(charge)
+  if (!actionError.value) reminderIndex.value += 1
 }
 
 async function exempt(charge: Charge) {
@@ -258,6 +284,15 @@ const monthOptions = computed(() => {
           </select>
           <Badge tone="success">{{ paidCount }} pagas</Badge>
           <Badge tone="warn">{{ pendingCount }} aguardando</Badge>
+          <BaseButton
+            v-if="chargesAwaitingPayment.length"
+            variant="outline"
+            size="sm"
+            class="ml-auto"
+            @click="startWhatsAppReminders"
+          >
+            Lembrar {{ chargesAwaitingPayment.length }} no WhatsApp
+          </BaseButton>
         </div>
         <p v-if="actionError" class="border-b border-danger/20 bg-dangerBg px-5 py-3 text-[13px] font-medium text-danger">
           {{ actionError }}
@@ -366,6 +401,38 @@ const monthOptions = computed(() => {
         </div>
       </Card>
     </div>
+
+    <Modal
+      :open="reminderQueue.length > 0"
+      title="Lembretes de pagamento"
+      @close="closeWhatsAppReminders"
+    >
+      <template v-if="currentReminder">
+        <p class="text-sm leading-relaxed text-ink2">
+          {{ reminderIndex + 1 }} de {{ reminderQueue.length }}: abra a conversa de
+          <strong class="text-ink">{{ currentReminder.user_name }}</strong> com a mensagem de PIX preenchida.
+        </p>
+        <p class="mt-2 text-xs leading-relaxed text-ink3">
+          O WhatsApp exige que você confira e toque em “Enviar”. O app nunca dispara mensagens sem essa confirmação.
+        </p>
+        <p v-if="actionError" class="mt-3 rounded-xl bg-dangerBg px-3 py-2.5 text-[13px] font-medium text-danger">
+          {{ actionError }}
+        </p>
+        <BaseButton
+          class="mt-5 w-full"
+          :loading="remindingChargeID === currentReminder.id"
+          @click="openNextWhatsAppReminder"
+        >
+          Abrir conversa de {{ currentReminder.user_name.split(' ')[0] }}
+        </BaseButton>
+      </template>
+      <template v-else>
+        <p class="text-sm leading-relaxed text-ink2">
+          Todas as {{ reminderQueue.length }} conversas foram abertas. Confira os envios no WhatsApp.
+        </p>
+        <BaseButton class="mt-5 w-full" @click="closeWhatsAppReminders">Concluir</BaseButton>
+      </template>
+    </Modal>
   </AdminLayout>
 </template>
 
