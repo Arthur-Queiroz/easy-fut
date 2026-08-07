@@ -24,6 +24,7 @@ const totalInput = ref('')
 const error = ref('')
 const generating = ref(false)
 const actionError = ref('')
+const actionSuccess = ref('')
 const remindingChargeID = ref('')
 const reminderQueue = ref<Charge[]>([])
 const reminderIndex = ref(0)
@@ -104,11 +105,16 @@ async function markPaid(charge: Charge) {
 
 async function sendWhatsAppReminder(charge: Charge) {
   actionError.value = ''
+  actionSuccess.value = ''
   remindingChargeID.value = charge.id
   try {
-    const { data } = await api.post<{ url: string }>(`/admin/charges/${charge.id}/whatsapp-reminder`)
-    window.open(data.url, '_blank', 'noopener')
+    const { data } = await api.post<{ message: string; provider_message_id: string }>(
+      `/admin/charges/${charge.id}/whatsapp-send`,
+    )
+    actionSuccess.value = `Lembrete enviado com sucesso para ${charge.user_name.split(' ')[0]}.`
     menuFor.value = ''
+    // eslint-disable-next-line no-console
+    console.log('WhatsApp message sent:', data.message, data.provider_message_id)
   } catch (e) {
     actionError.value = errorMessage(e)
   } finally {
@@ -118,6 +124,7 @@ async function sendWhatsAppReminder(charge: Charge) {
 
 function startWhatsAppReminders() {
   actionError.value = ''
+  actionSuccess.value = ''
   reminderQueue.value = chargesAwaitingPayment.value
   reminderIndex.value = 0
 }
@@ -269,7 +276,7 @@ const monthOptions = computed(() => {
             Gerar {{ activeUsers }} cobranças
           </BaseButton>
           <p class="mt-2.5 text-[11.5px] leading-relaxed text-ink3">
-            O vencimento é calculado automaticamente no 5º dia útil. Os lembretes são enviados manualmente pelo WhatsApp, sem custo ou QR Code.
+            O vencimento é calculado automaticamente no 5º dia útil. Os lembretes são enviados pelo WhatsApp automaticamente pelo sistema.
           </p>
         </Card>
       </div>
@@ -291,11 +298,14 @@ const monthOptions = computed(() => {
             class="ml-auto"
             @click="startWhatsAppReminders"
           >
-            Lembrar {{ chargesAwaitingPayment.length }} no WhatsApp
+            Enviar {{ chargesAwaitingPayment.length }} lembretes
           </BaseButton>
         </div>
         <p v-if="actionError" class="border-b border-danger/20 bg-dangerBg px-5 py-3 text-[13px] font-medium text-danger">
           {{ actionError }}
+        </p>
+        <p v-if="actionSuccess" class="border-b border-brand/20 bg-brandSoft px-5 py-3 text-[13px] font-medium text-brandInk">
+          {{ actionSuccess }}
         </p>
 
         <div class="overflow-x-auto">
@@ -352,7 +362,7 @@ const monthOptions = computed(() => {
                       :disabled="remindingChargeID === charge.id"
                       @click="sendWhatsAppReminder(charge)"
                     >
-                      {{ remindingChargeID === charge.id ? 'Abrindo...' : 'WhatsApp' }}
+                      {{ remindingChargeID === charge.id ? 'Enviando...' : 'Enviar lembrete' }}
                     </button>
                     <button type="button" class="text-[12.5px] font-semibold text-brand" @click="markPaid(charge)">
                       Registrar pagamento
@@ -409,26 +419,29 @@ const monthOptions = computed(() => {
     >
       <template v-if="currentReminder">
         <p class="text-sm leading-relaxed text-ink2">
-          {{ reminderIndex + 1 }} de {{ reminderQueue.length }}: abra a conversa de
-          <strong class="text-ink">{{ currentReminder.user_name }}</strong> com a mensagem de PIX preenchida.
+          {{ reminderIndex + 1 }} de {{ reminderQueue.length }}: enviar lembrete para
+          <strong class="text-ink">{{ currentReminder.user_name }}</strong>.
         </p>
         <p class="mt-2 text-xs leading-relaxed text-ink3">
-          O WhatsApp exige que você confira e toque em “Enviar”. O app nunca dispara mensagens sem essa confirmação.
+          A mensagem é disparada automaticamente pelo sistema via WhatsApp.
         </p>
         <p v-if="actionError" class="mt-3 rounded-xl bg-dangerBg px-3 py-2.5 text-[13px] font-medium text-danger">
           {{ actionError }}
+        </p>
+        <p v-if="actionSuccess" class="mt-3 rounded-xl bg-brandSoft px-3 py-2.5 text-[13px] font-medium text-brandInk">
+          {{ actionSuccess }}
         </p>
         <BaseButton
           class="mt-5 w-full"
           :loading="remindingChargeID === currentReminder.id"
           @click="openNextWhatsAppReminder"
         >
-          Abrir conversa de {{ currentReminder.user_name.split(' ')[0] }}
+          Enviar lembrete de {{ currentReminder.user_name.split(' ')[0] }}
         </BaseButton>
       </template>
       <template v-else>
         <p class="text-sm leading-relaxed text-ink2">
-          Todas as {{ reminderQueue.length }} conversas foram abertas. Confira os envios no WhatsApp.
+          Todos os {{ reminderQueue.length }} lembretes foram enviados.
         </p>
         <BaseButton class="mt-5 w-full" @click="closeWhatsAppReminders">Concluir</BaseButton>
       </template>
