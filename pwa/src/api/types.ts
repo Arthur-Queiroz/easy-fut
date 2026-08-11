@@ -24,6 +24,7 @@ export interface Invite {
   id: string
   token: string
   invited_name: string
+  phone: string
   role: 'admin' | 'player'
   creator_name: string
   expires_at: string

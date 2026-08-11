@@ -11,11 +11,14 @@ import SectionLabel from '../../components/ui/SectionLabel.vue'
 
 const invites = ref<Invite[]>([])
 const invitedName = ref('')
+const phone = ref('')
 const role = ref<'player' | 'admin'>('player')
 const validDays = ref(7)
 const error = ref('')
 const creating = ref(false)
 const copiedId = ref('')
+const sendingId = ref('')
+const sent = ref('')
 
 onMounted(load)
 
@@ -41,10 +44,12 @@ async function create() {
   try {
     await api.post('/admin/invites', {
       invited_name: invitedName.value,
+      phone: phone.value,
       role: role.value,
       valid_days: validDays.value,
     })
     invitedName.value = ''
+    phone.value = ''
     await load()
   } catch (e) {
     error.value = errorMessage(e)
@@ -59,10 +64,19 @@ async function copyLink(invite: Invite) {
   setTimeout(() => (copiedId.value = ''), 2000)
 }
 
-function sendWhatsApp(invite: Invite) {
-  const name = invite.invited_name || 'jogador'
-  const text = `Fala, ${name}! Você foi convidado pro Fut da Rapaziada. Crie sua conta aqui: ${inviteURL(invite)}`
-  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
+async function sendWhatsApp(invite: Invite) {
+  error.value = ''
+  sent.value = ''
+  sendingId.value = invite.id
+  try {
+    await api.post(`/admin/invites/${invite.id}/whatsapp-send`)
+    sent.value = invite.id
+    setTimeout(() => (sent.value = ''), 3000)
+  } catch (e) {
+    error.value = errorMessage(e)
+  } finally {
+    sendingId.value = ''
+  }
 }
 
 async function revoke(invite: Invite) {
@@ -106,6 +120,10 @@ function statusBadge(invite: Invite) {
           <label class="flex min-w-[220px] flex-[1.4] flex-col gap-1.5">
             <span class="text-[12.5px] font-semibold text-ink2">Nome do convidado (opcional)</span>
             <input v-model="invitedName" placeholder="Ex.: Fernando Prates" class="field" />
+          </label>
+          <label class="flex min-w-[180px] flex-1 flex-col gap-1.5">
+            <span class="text-[12.5px] font-semibold text-ink2">WhatsApp (opcional)</span>
+            <input v-model="phone" inputmode="tel" placeholder="(11) 98765-4321" class="field" />
           </label>
           <label class="flex min-w-[140px] flex-[.8] flex-col gap-1.5">
             <span class="text-[12.5px] font-semibold text-ink2">Perfil</span>
@@ -178,11 +196,13 @@ function statusBadge(invite: Invite) {
                     </button>
                     <button
                       type="button"
-                      class="inline-flex h-[30px] items-center gap-1.5 rounded-lg bg-brandSoft px-2.5 text-xs font-semibold text-brand"
+                      class="inline-flex h-[30px] items-center gap-1.5 rounded-lg bg-brandSoft px-2.5 text-xs font-semibold text-brand disabled:opacity-50"
+                      :disabled="!invite.phone || sendingId === invite.id"
+                      :title="invite.phone ? 'Enviar convite pelo WhatsApp' : 'Convite sem WhatsApp cadastrado — use Copiar'"
                       @click="sendWhatsApp(invite)"
                     >
                       <NavIcon name="chat" :size="13" :stroke-width="1.9" />
-                      WhatsApp
+                      {{ sendingId === invite.id ? 'Enviando…' : sent === invite.id ? 'Enviado!' : 'WhatsApp' }}
                     </button>
                     <button type="button" class="inline-flex h-[30px] items-center px-2.5 text-xs font-semibold text-danger" @click="revoke(invite)">
                       Revogar
