@@ -1,5 +1,8 @@
-# Cloudflare Tunnel terminates public TLS. Caddy serves HTTP only on the loopback port.
-http://{$DOMAIN:localhost} {
+# Cloudflare Tunnel terminates public TLS; este Caddy so fala HTTP interno.
+# Responde em qualquer Host de proposito: o Caddy da edge encaminha usando o
+# dominio, mas o healthcheck do deployctl bate direto no IP do container --
+# um site fixado em {$DOMAIN} devolveria 404 para ele e barraria o release.
+:80 {
 	encode gzip zstd
 
 	handle /api/* {

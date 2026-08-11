@@ -1,34 +1,20 @@
 name: fut-app-pwa
 
+# Um servico so, rodando exatamente a imagem que vai para a VPS. Antes o
+# Compose montava o Caddyfile e os assets por fora, entao a imagem publicada
+# nunca era exercitada aqui -- foi assim que uma imagem sem servidor passou
+# pela CI e so quebrou no deploy.
 services:
-  frontend-build:
+  web:
     build: .
-    command: sh -c "rm -rf /out/* && cp -r /dist/. /out/"
-    volumes:
-      - frontend-dist:/out
-
-  caddy:
-    image: caddy:2-alpine
     restart: unless-stopped
-    depends_on:
-      frontend-build:
-        condition: service_completed_successfully
+    read_only: true
+    tmpfs:
+      - /tmp
     ports:
       - "127.0.0.1:8087:80"
-    environment:
-      DOMAIN: ${DOMAIN:-localhost}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - frontend-dist:/srv:ro
-      - caddy-data:/data
-      - caddy-config:/config
     networks:
       - fut-app
-
-volumes:
-  frontend-dist:
-  caddy-data:
-  caddy-config:
 
 networks:
   fut-app:
