@@ -1,6 +1,6 @@
 # AGENTS.md — fut-app-pwa
 
-Frontend (PWA) do sistema **Fut da Rapaziada** — gestão de partidas, mensalidades e votação.
+Frontend (PWA) do sistema **Easy Fut** — gestão de partidas, mensalidades e votação.
 
 ## Stack
 
