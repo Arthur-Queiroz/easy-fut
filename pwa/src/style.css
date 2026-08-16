@@ -1,7 +1,8 @@
-@import '@fontsource/barlow/400.css';
-@import '@fontsource/barlow/500.css';
-@import '@fontsource/barlow/600.css';
-@import '@fontsource/barlow/700.css';
+@import '@fontsource/manrope/400.css';
+@import '@fontsource/manrope/500.css';
+@import '@fontsource/manrope/600.css';
+@import '@fontsource/manrope/700.css';
+@import '@fontsource/manrope/800.css';
 @import '@fontsource/barlow-condensed/500.css';
 @import '@fontsource/barlow-condensed/600.css';
 @import '@fontsource/barlow-condensed/700.css';
@@ -10,7 +11,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Tokens do mockup (Fut da Rapaziada.dc.html) — pares claro/escuro. */
+/* Tokens do design system Easy Fut — pares claro/escuro. */
 :root {
   --canvas: #e6ede7;
   --bg: #f3f6f3;
@@ -20,7 +21,7 @@
   --ink: #15231b;
   --ink2: #576b5f;
   --ink3: #8ca094;
-  --brand: #0e9455;
+  --brand: #00a862;
   --brand-ink: #ffffff;
   --brand-soft: #dff2e7;
   --warn: #b45309;
@@ -29,6 +30,7 @@
   --danger-bg: #fbe9e9;
   --info: #2563eb;
   --info-bg: #e5edfc;
+  --lime: #2ee07c;
   --shadow: 0 1px 2px rgba(10, 40, 25, 0.06), 0 4px 14px rgba(10, 40, 25, 0.08);
 }
 
@@ -42,7 +44,7 @@
   --ink2: #a6baae;
   --ink3: #71877a;
   --brand: #34ce81;
-  --brand-ink: #06281a;
+  --brand-ink: #06120c;
   --brand-soft: #17392a;
   --warn: #f0a93b;
   --warn-bg: #382b13;

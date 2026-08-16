@@ -31,10 +31,10 @@ const statusMessage: Record<string, string> = {
 
 <template>
   <div
-    class="mx-auto flex min-h-dvh w-full max-w-md flex-col px-7 pb-12 pt-20 text-white"
-    style="background-image: linear-gradient(165deg, #082a1d 0%, #0a3b28 45%, #0f5238 100%)"
+    class="flex min-h-dvh flex-col px-7 pb-12 pt-20 text-white md:items-center md:justify-center md:px-[12vw] md:py-16"
+    style="background-image: linear-gradient(165deg, #0b1210 0%, #132a20 45%, #102a20 100%)"
   >
-    <div class="flex flex-1 flex-col items-center justify-center text-center">
+    <div class="flex flex-1 flex-col items-center justify-center text-center md:max-w-md md:flex-none">
       <div class="flex h-[92px] w-[92px] items-center justify-center rounded-full border-2 border-lime bg-lime/10 text-lime">
         <NavIcon name="ball" :size="46" :stroke-width="1.6" />
       </div>
@@ -72,11 +72,11 @@ const statusMessage: Record<string, string> = {
       </template>
     </div>
 
-    <div class="flex flex-col items-center gap-3.5">
+    <div class="flex w-full flex-col items-center gap-3.5 md:max-w-md">
       <button
         v-if="invite && invite.status === 'pending'"
         type="button"
-        class="flex h-[54px] w-full items-center justify-center rounded-[14px] bg-lime text-base font-bold text-pitch-2"
+        class="flex h-[54px] w-full items-center justify-center rounded-[14px] bg-lime text-base font-bold text-pitch-1"
         @click="router.push(`/cadastro/${token}`)"
       >
         Criar minha conta

@@ -60,9 +60,39 @@ function toggleResponse() {
       <div v-else class="text-[22px] font-bold">Próxima partida</div>
     </template>
 
-    <div v-if="match" class="flex flex-col gap-3 px-4 pt-4">
-      <!-- Minha resposta -->
-      <Card class="flex items-center justify-between px-4 py-3.5">
+    <div v-if="match" class="flex flex-col gap-3 px-4 pt-4 lg:px-0 lg:pt-0">
+      <!-- Cabeçalho desktop -->
+      <div class="hidden items-start justify-between gap-5 lg:flex">
+        <div>
+          <div class="text-2xl font-extrabold">{{ formatDateLong(match.match_date) }} · {{ formatHour(match.start_time) }}</div>
+          <div class="mt-1 text-[14px] text-ink2">{{ match.venue }}<template v-if="match.address"> · {{ match.address }}</template></div>
+        </div>
+        <div class="flex shrink-0 items-center gap-3">
+          <span
+            v-if="myResponse === 'going'"
+            class="inline-flex items-center gap-1.5 rounded-full bg-brandSoft px-3 py-[5px] text-[13px] font-semibold text-brand"
+          >✓ Você vai participar</span>
+          <span
+            v-else-if="myResponse === 'not_going'"
+            class="inline-flex items-center gap-1.5 rounded-full bg-dangerBg px-3 py-[5px] text-[13px] font-semibold text-danger"
+          >✕ Você não vai</span>
+          <span
+            v-else
+            class="inline-flex items-center gap-1.5 rounded-full bg-warnBg px-3 py-[5px] text-[13px] font-semibold text-warn"
+          >! Você ainda não respondeu</span>
+          <button
+            v-if="match.status === 'open'"
+            type="button"
+            class="text-[13px] font-semibold text-brand"
+            @click="toggleResponse"
+          >
+            Alterar
+          </button>
+        </div>
+      </div>
+
+      <!-- Minha resposta mobile -->
+      <Card class="flex items-center justify-between px-4 py-3.5 lg:hidden">
         <span
           v-if="myResponse === 'going'"
           class="inline-flex items-center gap-1.5 rounded-full bg-brandSoft px-3 py-[5px] text-[13px] font-semibold text-brand"
@@ -86,50 +116,52 @@ function toggleResponse() {
         <span v-else class="text-[12px] text-ink3">Confirmação encerrada</span>
       </Card>
 
-      <!-- Confirmados -->
-      <Card class="p-4">
-        <div class="mb-[11px] flex items-center justify-between">
-          <SectionLabel>Confirmados</SectionLabel>
-          <span class="font-condensed text-[15px] font-bold text-brand">{{ going.length }}</span>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div v-for="entry in going" :key="entry.user_id" class="flex items-center gap-2">
-            <Avatar :name="entry.name" :color="entry.avatar_color" size="xs" />
-            <span class="truncate text-[13px] font-medium">
-              {{ entry.name }}
-              <span
-                v-if="entry.role === 'admin'"
-                class="rounded-md bg-infoBg px-1.5 py-px text-[10px] font-semibold text-info"
-              >ADMIN</span>
-            </span>
+      <div class="grid gap-3 lg:grid-cols-2 lg:items-start">
+        <!-- Confirmados -->
+        <Card class="p-4">
+          <div class="mb-[11px] flex items-center justify-between">
+            <SectionLabel>Confirmados</SectionLabel>
+            <span class="font-condensed text-[15px] font-bold text-brand">{{ going.length }}</span>
           </div>
-        </div>
-        <p v-if="going.length === 0" class="text-sm text-ink3">Ninguém confirmou ainda.</p>
-      </Card>
-
-      <!-- Não vão / sem resposta -->
-      <div class="flex gap-3">
-        <Card class="flex-1 px-4 py-3.5">
-          <div class="mb-[9px] flex items-center justify-between">
-            <SectionLabel>Não vão</SectionLabel>
-            <span class="font-condensed text-[15px] font-bold text-danger">{{ notGoing.length }}</span>
-          </div>
-          <div class="flex flex-col gap-[7px]">
-            <div v-for="entry in notGoing" :key="entry.user_id" class="flex items-center gap-2 opacity-75">
-              <Avatar :name="entry.name" color="#8CA094" size="xs" />
-              <span class="truncate text-[12.5px] font-medium">{{ entry.name }}</span>
+          <div class="grid grid-cols-2 gap-2">
+            <div v-for="entry in going" :key="entry.user_id" class="flex items-center gap-2">
+              <Avatar :name="entry.name" :color="entry.avatar_color" size="xs" />
+              <span class="truncate text-[13px] font-medium">
+                {{ entry.name }}
+                <span
+                  v-if="entry.role === 'admin'"
+                  class="rounded-md bg-infoBg px-1.5 py-px text-[10px] font-semibold text-info"
+                >ADMIN</span>
+              </span>
             </div>
           </div>
+          <p v-if="going.length === 0" class="text-sm text-ink3">Ninguém confirmou ainda.</p>
         </Card>
-        <div class="flex-1 rounded-2xl border border-dashed border-border bg-surface px-4 py-3.5">
-          <div class="mb-[9px] flex items-center justify-between">
-            <SectionLabel>Sem resposta</SectionLabel>
-            <span class="font-condensed text-[15px] font-bold text-warn">{{ noResponse.length }}</span>
-          </div>
-          <div class="flex flex-col gap-[7px]">
-            <div v-for="entry in noResponse" :key="entry.user_id" class="flex items-center gap-2 opacity-60">
-              <Avatar :name="entry.name" color="#8CA094" size="xs" />
-              <span class="truncate text-[12.5px] font-medium">{{ entry.name }}</span>
+
+        <!-- Não vão / sem resposta -->
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-1">
+          <Card class="px-4 py-3.5">
+            <div class="mb-[9px] flex items-center justify-between">
+              <SectionLabel>Não vão</SectionLabel>
+              <span class="font-condensed text-[15px] font-bold text-danger">{{ notGoing.length }}</span>
+            </div>
+            <div class="flex flex-col gap-[7px]">
+              <div v-for="entry in notGoing" :key="entry.user_id" class="flex items-center gap-2 opacity-75">
+                <Avatar :name="entry.name" color="#8CA094" size="xs" />
+                <span class="truncate text-[12.5px] font-medium">{{ entry.name }}</span>
+              </div>
+            </div>
+          </Card>
+          <div class="rounded-2xl border border-dashed border-border bg-surface px-4 py-3.5">
+            <div class="mb-[9px] flex items-center justify-between">
+              <SectionLabel>Sem resposta</SectionLabel>
+              <span class="font-condensed text-[15px] font-bold text-warn">{{ noResponse.length }}</span>
+            </div>
+            <div class="flex flex-col gap-[7px]">
+              <div v-for="entry in noResponse" :key="entry.user_id" class="flex items-center gap-2 opacity-60">
+                <Avatar :name="entry.name" color="#8CA094" size="xs" />
+                <span class="truncate text-[12.5px] font-medium">{{ entry.name }}</span>
+              </div>
             </div>
           </div>
         </div>

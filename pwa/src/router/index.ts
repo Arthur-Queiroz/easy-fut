@@ -29,7 +29,7 @@ export const router = createRouter({
     { path: '/admin/convites', name: 'admin-invites', component: () => import('../views/admin/InvitesView.vue'), meta: { admin: true } },
     { path: '/admin/configuracoes', name: 'admin-settings', component: () => import('../views/admin/SettingsView.vue'), meta: { admin: true } },
 
-    { path: '/:pathMatch(.*)*', redirect: '/' },
+    { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('../views/NotFoundView.vue') },
   ],
 })
 

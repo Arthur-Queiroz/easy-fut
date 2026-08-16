@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { initials } from '../../lib/format'
+import { safeColor } from '../../lib/security'
 
 const props = withDefaults(
   defineProps<{ name: string; color: string; size?: 'xs' | 'sm' | 'md' | 'lg'; ring?: boolean }>(),
@@ -17,14 +18,16 @@ const sizeClass = computed(
     })[props.size],
 )
 
+const safeBgColor = computed(() => safeColor(props.color))
+
 // Texto claro ou escuro conforme a luminância da cor de fundo.
 const textColor = computed(() => {
-  const hex = props.color.replace('#', '')
-  if (hex.length !== 6) return '#fff'
+  const hex = safeBgColor.value.replace('#', '')
+  if (hex.length !== 6 || hex === '000000') return '#fff'
   const r = parseInt(hex.slice(0, 2), 16)
   const g = parseInt(hex.slice(2, 4), 16)
   const b = parseInt(hex.slice(4, 6), 16)
-  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#0A3B28' : '#ffffff'
+  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#06120c' : '#ffffff'
 })
 </script>
 
@@ -32,7 +35,7 @@ const textColor = computed(() => {
   <div
     class="flex shrink-0 items-center justify-center rounded-full font-semibold"
     :class="[sizeClass, ring ? 'border-2 border-white/30' : '']"
-    :style="{ backgroundColor: color, color: textColor }"
+    :style="{ backgroundColor: safeBgColor, color: textColor }"
   >
     {{ initials(name) }}
   </div>

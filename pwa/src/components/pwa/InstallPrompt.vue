@@ -60,6 +60,6 @@ onBeforeUnmount(() => {
       <p class="font-condensed text-xl font-bold">Instale o app</p>
       <p class="mt-1 text-sm text-white/70 md:text-ink2">Acesse o Fut da Rapaziada pela tela inicial do celular.</p>
     </div>
-    <button type="button" class="mt-4 h-11 w-full rounded-xl bg-lime font-bold text-pitch-2" @click="install">Instalar app</button>
+    <button type="button" class="mt-4 h-11 w-full rounded-xl bg-lime font-bold text-pitch-1" @click="install">Instalar app</button>
   </aside>
 </template>

@@ -30,7 +30,7 @@ async function logout() {
     <!-- Sidebar desktop / barra superior mobile -->
     <aside
       class="flex shrink-0 flex-row items-center gap-1 overflow-x-auto px-3 py-2 lg:min-h-dvh lg:w-[216px] lg:flex-col lg:items-stretch lg:gap-0 lg:px-3 lg:py-[18px]"
-      style="background-image: linear-gradient(180deg, #0a3b28, #082a1d)"
+      style="background-image: linear-gradient(180deg, #0b1210, #132a20)"
     >
       <router-link to="/" class="hidden items-center gap-2.5 px-2 pb-[18px] lg:flex" title="Voltar ao app">
         <span
@@ -59,7 +59,7 @@ async function logout() {
       <div class="flex-1" />
 
       <div class="hidden items-center gap-2.5 border-t border-white/10 px-2 py-2.5 lg:flex">
-        <Avatar :name="auth.user?.name ?? ''" color="#C8F14B" size="sm" />
+        <Avatar :name="auth.user?.name ?? ''" color="#2EE07C" size="sm" />
         <div class="min-w-0 flex-1">
           <div class="truncate text-[13px] font-semibold text-white">{{ auth.firstName }}</div>
           <div class="text-[10.5px] font-medium text-white/50">Administrador</div>
@@ -73,7 +73,7 @@ async function logout() {
     <div class="min-w-0 flex-1 p-4 lg:overflow-y-auto lg:p-7">
       <div class="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h1 class="text-[22px] font-bold text-ink"><slot name="title" /></h1>
+          <h1 class="text-[22px] font-bold text-ink lg:text-2xl lg:font-extrabold"><slot name="title" /></h1>
           <p class="text-[13.5px] text-ink2"><slot name="subtitle" /></p>
         </div>
         <div class="flex items-center gap-2.5">

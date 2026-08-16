@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { api, errorMessage } from '../../api/client'
 import type { Charge, ChargeBatch } from '../../api/types'
 import { currentMonth, formatCents, formatDMY, formatMonth, formatTimestamp } from '../../lib/format'
+import { sanitizeCSVCell } from '../../lib/security'
 import AdminLayout from '../../components/layout/AdminLayout.vue'
 import NavIcon from '../../components/layout/NavIcon.vue'
 import Avatar from '../../components/ui/Avatar.vue'
@@ -168,7 +169,9 @@ function exportCSV() {
       c.paid_method,
     ]),
   ]
-  const csv = rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(';')).join('\n')
+  const csv = rows
+    .map((row) => row.map((cell) => `"${sanitizeCSVCell(cell).replace(/"/g, '""')}"`).join(';'))
+    .join('\n')
   const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
   const link = document.createElement('a')
   link.href = url
@@ -218,7 +221,7 @@ const monthOptions = computed(() => {
     <div class="grid gap-4 xl:grid-cols-[360px_1fr]">
       <div class="flex flex-col gap-3.5">
         <!-- Fotografia do rateio gerado -->
-        <div v-if="batch" class="rounded-2xl p-5 text-white" style="background-image: linear-gradient(150deg, #0a3b28, #0f5238)">
+        <div v-if="batch" class="rounded-2xl p-5 text-white" style="background-image: linear-gradient(150deg, #0b1210, #132a20)">
           <div class="text-[11px] font-bold tracking-[.1em] text-white/55">
             {{ formatMonth(batch.reference_month).toUpperCase() }} · GERADA
           </div>

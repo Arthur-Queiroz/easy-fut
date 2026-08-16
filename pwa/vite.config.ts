@@ -12,8 +12,8 @@ export default defineConfig({
         name: 'Fut da Rapaziada',
         short_name: 'Fut',
         description: 'Gestão de partidas e mensalidades do grupo',
-        theme_color: '#0A3B28',
-        background_color: '#0A3B28',
+        theme_color: '#0B1210',
+        background_color: '#0B1210',
         display: 'standalone',
         lang: 'pt-BR',
         icons: [

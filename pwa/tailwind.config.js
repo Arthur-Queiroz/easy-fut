@@ -1,6 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-// Tokens do mockup — os valores claro/escuro ficam em CSS variables (src/style.css),
-// então as classes bg-surface, text-ink etc. já respondem ao toggle de tema.
+// Tokens do design system Easy Fut — os valores claro/escuro ficam em CSS variables.
 export default {
   content: ['./index.html', './src/**/*.{vue,ts}'],
   darkMode: 'class',
@@ -24,11 +23,11 @@ export default {
         dangerBg: 'var(--danger-bg)',
         info: 'var(--info)',
         infoBg: 'var(--info-bg)',
-        lime: '#C8F14B',
-        pitch: { 1: '#082A1D', 2: '#0A3B28', 3: '#0F5238', 4: '#116040' },
+        lime: 'var(--lime)',
+        pitch: { 1: '#0b1210', 2: '#132a20', 3: '#102a20', 4: '#19513a' },
       },
       fontFamily: {
-        sans: ['Barlow', 'system-ui', 'sans-serif'],
+        sans: ['Manrope', 'system-ui', 'sans-serif'],
         condensed: ['"Barlow Condensed"', 'sans-serif'],
       },
       boxShadow: {

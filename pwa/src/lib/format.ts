@@ -100,6 +100,12 @@ function pad(n: number): string {
   return String(n).padStart(2, '0')
 }
 
+/** Data local de hoje no formato 'YYYY-MM-DD'. */
+export function todayISO(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 /** 'YYYY-MM' do mês atual (ou seguinte com offset). */
 export function currentMonth(offset = 0): string {
   const d = new Date()

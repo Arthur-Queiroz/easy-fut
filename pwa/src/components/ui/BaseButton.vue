@@ -19,7 +19,7 @@ const variantClass = computed(
       'outline-brand': 'border-[1.5px] border-brand text-brand font-bold',
       danger: 'bg-danger text-white font-bold',
       ghost: 'text-brand font-semibold',
-      lime: 'bg-lime text-pitch-2 font-bold',
+      lime: 'bg-lime text-pitch-1 font-bold',
     })[props.variant],
 )
 

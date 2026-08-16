@@ -30,7 +30,7 @@ async function submit() {
 <template>
   <div
     class="flex min-h-dvh w-full flex-col px-7 pb-12 pt-24 text-white md:grid md:grid-cols-2 md:items-center md:gap-20 md:px-[12vw] md:py-16"
-    style="background-image: linear-gradient(165deg, #082a1d 0%, #0a3b28 45%, #0f5238 100%)"
+    style="background-image: linear-gradient(165deg, #0b1210 0%, #132a20 45%, #102a20 100%)"
   >
     <div class="flex flex-col items-center text-center md:items-start md:text-left">
       <div class="flex h-[92px] w-[92px] items-center justify-center rounded-full border-2 border-lime bg-lime/10 text-lime">
@@ -75,7 +75,7 @@ async function submit() {
       <button
         type="submit"
         :disabled="loading"
-        class="mt-2 flex h-[54px] w-full items-center justify-center rounded-[14px] bg-lime text-base font-bold text-pitch-2 disabled:opacity-60"
+        class="mt-2 flex h-[54px] w-full items-center justify-center rounded-[14px] bg-lime text-base font-bold text-pitch-1 disabled:opacity-60"
       >
         {{ loading ? 'Entrando…' : 'Entrar' }}
       </button>

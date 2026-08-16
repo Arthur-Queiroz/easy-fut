@@ -84,7 +84,7 @@ async function logout() {
   <MobileShell>
     <template #header>
       <div class="flex items-center gap-4">
-        <Avatar :name="auth.user?.name ?? ''" color="#C8F14B" size="lg" ring />
+        <Avatar :name="auth.user?.name ?? ''" color="#2EE07C" size="lg" ring />
         <div>
           <div class="text-[22px] font-bold">{{ auth.user?.name }}</div>
           <div class="mt-1.5 flex flex-wrap gap-[7px]">
@@ -100,7 +100,24 @@ async function logout() {
       </div>
     </template>
 
-    <div class="flex flex-col gap-3.5 px-4 pt-4">
+    <div class="flex flex-col gap-3.5 px-4 pt-4 lg:mx-auto lg:max-w-3xl lg:px-0 lg:pt-0">
+      <!-- Cabeçalho desktop -->
+      <div class="hidden items-center gap-5 lg:flex">
+        <Avatar :name="auth.user?.name ?? ''" color="#2EE07C" size="lg" ring />
+        <div>
+          <div class="text-2xl font-extrabold">{{ auth.user?.name }}</div>
+          <div class="mt-1.5 flex flex-wrap gap-[7px]">
+            <span class="rounded-full bg-brandSoft px-2.5 py-[3px] text-[11.5px] font-semibold text-brand">● Ativo</span>
+            <span class="rounded-full bg-surface2 px-2.5 py-[3px] text-[11.5px] font-semibold text-ink2">
+              {{ auth.isAdmin ? 'Admin' : 'Jogador' }}
+            </span>
+            <span class="rounded-full bg-surface2 px-2.5 py-[3px] text-[11.5px] font-semibold text-ink2">
+              {{ memberSince }}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <!-- Estatísticas -->
       <div class="grid grid-cols-3 gap-2.5">
         <Card class="px-2 py-3.5 text-center">
@@ -117,43 +134,45 @@ async function logout() {
         </Card>
       </div>
 
-      <!-- Contato -->
-      <Card class="px-4 py-1.5">
-        <div class="flex items-center gap-3 border-b border-border py-[11px]">
-          <NavIcon name="chat" :size="17" class="text-ink3" />
-          <div class="flex-1">
-            <div class="text-[11.5px] text-ink3">WhatsApp</div>
-            <div class="text-sm font-medium">{{ auth.user?.phone || '—' }}</div>
+      <div class="grid gap-3.5 lg:grid-cols-2">
+        <!-- Contato -->
+        <Card class="px-4 py-1.5">
+          <div class="flex items-center gap-3 border-b border-border py-[11px]">
+            <NavIcon name="chat" :size="17" class="text-ink3" />
+            <div class="flex-1">
+              <div class="text-[11.5px] text-ink3">WhatsApp</div>
+              <div class="text-sm font-medium">{{ auth.user?.phone || '—' }}</div>
+            </div>
+            <button type="button" class="text-[12.5px] font-semibold text-brand" @click="startEdit('phone')">Editar</button>
           </div>
-          <button type="button" class="text-[12.5px] font-semibold text-brand" @click="startEdit('phone')">Editar</button>
-        </div>
-        <div class="flex items-center gap-3 py-[11px]">
-          <NavIcon name="mail" :size="17" class="text-ink3" />
-          <div class="flex-1">
-            <div class="text-[11.5px] text-ink3">E-mail</div>
-            <div class="text-sm font-medium">{{ auth.user?.email }}</div>
+          <div class="flex items-center gap-3 py-[11px]">
+            <NavIcon name="mail" :size="17" class="text-ink3" />
+            <div class="flex-1">
+              <div class="text-[11.5px] text-ink3">E-mail</div>
+              <div class="text-sm font-medium">{{ auth.user?.email }}</div>
+            </div>
+            <button type="button" class="text-[12.5px] font-semibold text-brand" @click="startEdit('email')">Editar</button>
           </div>
-          <button type="button" class="text-[12.5px] font-semibold text-brand" @click="startEdit('email')">Editar</button>
-        </div>
-      </Card>
+        </Card>
 
-      <!-- Tema -->
-      <Card class="flex items-center justify-between px-4 py-3.5">
-        <span class="text-sm font-medium">Modo escuro</span>
-        <button
-          type="button"
-          class="relative h-7 w-12 rounded-full transition-colors"
-          :class="theme.theme === 'dark' ? 'bg-brand' : 'bg-surface2 border border-border'"
-          role="switch"
-          :aria-checked="theme.theme === 'dark'"
-          @click="theme.toggle()"
-        >
-          <span
-            class="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all"
-            :class="theme.theme === 'dark' ? 'left-6' : 'left-1'"
-          />
-        </button>
-      </Card>
+        <!-- Tema -->
+        <Card class="flex items-center justify-between px-4 py-3.5">
+          <span class="text-sm font-medium">Modo escuro</span>
+          <button
+            type="button"
+            class="relative h-7 w-12 rounded-full transition-colors"
+            :class="theme.theme === 'dark' ? 'bg-brand' : 'bg-surface2 border border-border'"
+            role="switch"
+            :aria-checked="theme.theme === 'dark'"
+            @click="theme.toggle()"
+          >
+            <span
+              class="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all"
+              :class="theme.theme === 'dark' ? 'left-6' : 'left-1'"
+            />
+          </button>
+        </Card>
+      </div>
 
       <!-- Pagamentos -->
       <Card class="p-4">
