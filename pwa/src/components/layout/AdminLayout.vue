@@ -39,7 +39,7 @@ async function logout() {
           <NavIcon name="ball" :size="18" :stroke-width="1.7" />
         </span>
         <span class="font-condensed text-[15px] font-bold leading-[1.1] tracking-[.1em] text-lime">
-          FUT DA<br />RAPAZIADA
+          EASY FUT
         </span>
       </router-link>
 

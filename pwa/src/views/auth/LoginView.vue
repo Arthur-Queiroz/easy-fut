@@ -37,7 +37,7 @@ async function submit() {
         <NavIcon name="ball" :size="46" :stroke-width="1.6" />
       </div>
       <div class="mt-[18px] font-condensed text-[30px] font-bold leading-none tracking-[.14em] text-lime">
-        FUT DA RAPAZIADA
+        EASY FUT
       </div>
       <div class="mt-1 text-[13px] font-semibold tracking-[.22em] text-white/55">GESTÃO DO GRUPO</div>
     </div>

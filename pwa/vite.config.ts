@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       manifest: {
-        name: 'Fut da Rapaziada',
-        short_name: 'Fut',
+        name: 'Easy Fut',
+        short_name: 'Easy Fut',
         description: 'Gestão de partidas e mensalidades do grupo',
         theme_color: '#0B1210',
         background_color: '#0B1210',
