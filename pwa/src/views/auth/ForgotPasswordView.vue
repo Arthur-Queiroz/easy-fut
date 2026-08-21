@@ -22,7 +22,7 @@ async function submit() {
 </script>
 
 <template>
-  <main class="flex min-h-dvh items-center justify-center px-6 md:bg-pitch-2" style="background-image: linear-gradient(165deg, #0b1210 0%, #132a20 100%)">
+  <main class="flex min-h-dvh items-center justify-center px-6 md:bg-pitch-2" style="background-image: linear-gradient(165deg, #0c100f 0%, #13251f 100%)">
     <form class="w-full max-w-md rounded-3xl bg-white/5 p-7 md:bg-surface md:text-ink md:shadow-2xl" @submit.prevent="submit">
       <h1 class="font-condensed text-3xl font-bold text-white md:text-ink">Recuperar senha</h1>
       <p class="mt-2 text-sm text-white/70 md:text-ink2">Informe seu e-mail para receber um link de redefinição.</p>

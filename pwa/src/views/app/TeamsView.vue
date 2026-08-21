@@ -31,14 +31,14 @@ const playerCount = computed(() => teams.value.reduce((n, t) => n + t.members.le
 function headerStyle(team: Team) {
   const color = safeColor(team.team_color)
   const dark: Record<string, string> = {
-    '#C8F14B': 'linear-gradient(135deg,#102A20,#19513A)',
+    '#C8F14B': 'linear-gradient(135deg,#0F3325,#1A6644)',
     '#F59E0B': 'linear-gradient(135deg,#2A1B08,#7C4A0C)',
     '#3B82F6': 'linear-gradient(135deg,#1E3A8A,#2563EB)',
     '#1F2937': 'linear-gradient(135deg,#111827,#374151)',
-    '#2EE07C': 'linear-gradient(135deg,#102A20,#19513A)',
-    '#00A862': 'linear-gradient(135deg,#102A20,#19513A)',
+    '#2EE07C': 'linear-gradient(135deg,#0F3325,#1A6644)',
+    '#00A862': 'linear-gradient(135deg,#0F3325,#1A6644)',
   }
-  return { backgroundImage: dark[color] ?? 'linear-gradient(135deg,#102A20,#19513A)' }
+  return { backgroundImage: dark[color] ?? 'linear-gradient(135deg,#0F3325,#1A6644)' }
 }
 </script>
 

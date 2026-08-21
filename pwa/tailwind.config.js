@@ -24,7 +24,7 @@ export default {
         info: 'var(--info)',
         infoBg: 'var(--info-bg)',
         lime: 'var(--lime)',
-        pitch: { 1: '#0b1210', 2: '#132a20', 3: '#102a20', 4: '#19513a' },
+        pitch: { 1: '#0c100f', 2: '#13251f', 3: '#0f3325', 4: '#1a6644' },
       },
       fontFamily: {
         sans: ['Manrope', 'system-ui', 'sans-serif'],

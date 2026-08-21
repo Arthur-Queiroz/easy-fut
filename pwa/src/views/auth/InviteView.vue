@@ -32,7 +32,7 @@ const statusMessage: Record<string, string> = {
 <template>
   <div
     class="flex min-h-dvh flex-col px-7 pb-12 pt-20 text-white md:items-center md:justify-center md:px-[12vw] md:py-16"
-    style="background-image: linear-gradient(165deg, #0b1210 0%, #132a20 45%, #102a20 100%)"
+    style="background-image: linear-gradient(165deg, #0c100f 0%, #13251f 45%, #0f3325 100%)"
   >
     <div class="flex flex-1 flex-col items-center justify-center text-center md:max-w-md md:flex-none">
       <div class="flex h-[92px] w-[92px] items-center justify-center rounded-full border-2 border-lime bg-lime/10 text-lime">

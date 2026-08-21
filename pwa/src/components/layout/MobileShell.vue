@@ -12,7 +12,7 @@ defineProps<{ noNav?: boolean }>()
   <div class="mx-auto flex min-h-dvh w-full flex-col bg-bg lg:min-h-[calc(100dvh-64px)] lg:max-w-none">
     <header
       class="bg-gradient-to-br from-pitch-3 to-pitch-4 px-5 pb-5 pt-[max(env(safe-area-inset-top),1.5rem)] text-white lg:hidden"
-      style="background-image: linear-gradient(150deg, #102a20, #19513a)"
+      style="background-image: linear-gradient(150deg, #0f3325, #1a6644)"
     >
       <slot name="header" />
     </header>

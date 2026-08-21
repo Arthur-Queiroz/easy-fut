@@ -35,17 +35,17 @@
 }
 
 .dark {
-  --canvas: #0a120e;
-  --bg: #101b15;
-  --surface: #17251d;
-  --surface2: #1e3126;
-  --border: #2a3e32;
-  --ink: #edf5ef;
-  --ink2: #a6baae;
-  --ink3: #71877a;
+  --canvas: #0a0d0c;
+  --bg: #0f1312;
+  --surface: #161b19;
+  --surface2: #1e2422;
+  --border: #2a322f;
+  --ink: #ecf1ef;
+  --ink2: #a6b2ae;
+  --ink3: #74807c;
   --brand: #34ce81;
   --brand-ink: #06120c;
-  --brand-soft: #17392a;
+  --brand-soft: #123526;
   --warn: #f0a93b;
   --warn-bg: #382b13;
   --danger: #f17070;

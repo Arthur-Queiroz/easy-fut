@@ -32,7 +32,7 @@ async function logout() {
 <template>
   <header
     class="hidden h-16 shrink-0 items-center justify-between px-8 lg:flex"
-    style="background-image: linear-gradient(135deg, #0b1210 0%, #132a20 100%)"
+    style="background-image: linear-gradient(135deg, #0c100f 0%, #13251f 100%)"
   >
     <div class="flex items-center gap-8">
       <router-link to="/" class="flex items-center gap-2.5">

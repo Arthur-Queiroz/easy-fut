@@ -6,6 +6,7 @@ import { validatePassword } from '../../lib/security'
 import type { InvitePublic, User } from '../../api/types'
 import { useAuthStore } from '../../stores/auth'
 import BaseButton from '../../components/ui/BaseButton.vue'
+import PasswordInput from '../../components/ui/PasswordInput.vue'
 import NavIcon from '../../components/layout/NavIcon.vue'
 
 const route = useRoute()
@@ -67,7 +68,7 @@ async function submit() {
   <div class="flex min-h-dvh flex-col bg-bg md:items-center md:justify-center md:bg-pitch-2 md:px-[12vw] md:py-16">
     <header
       class="px-6 pb-[22px] pt-16 text-white md:hidden"
-      style="background-image: linear-gradient(150deg, #102a20, #19513a)"
+      style="background-image: linear-gradient(150deg, #0f3325, #1a6644)"
     >
       <h1 class="text-2xl font-bold">Criar sua conta</h1>
       <span
@@ -102,20 +103,20 @@ async function submit() {
         <input v-model="phone" type="tel" autocomplete="tel" class="input" placeholder="(11) 98765-4321" />
         <span class="text-xs text-ink3">Usado para os lembretes de pagamento</span>
       </label>
-      <label class="flex flex-col gap-1.5">
-        <span class="text-[13px] font-semibold text-ink2">Senha</span>
-        <input
+      <!-- Sem <label> envolvendo: o botão de ocultar entraria no nome acessível do campo. -->
+      <div class="flex flex-col gap-1.5">
+        <label for="signup-password" class="text-[13px] font-semibold text-ink2">Senha</label>
+        <PasswordInput
+          id="signup-password"
           v-model="password"
           required
-          type="password"
           minlength="8"
           pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}"
           title="Mínimo 8 caracteres, com letra maiúscula, minúscula e número"
           autocomplete="new-password"
-          class="input"
           placeholder="Mínimo 8 caracteres"
         />
-      </label>
+      </div>
 
       <p v-if="error" class="rounded-xl bg-dangerBg px-4 py-3 text-[13px] font-medium text-danger">{{ error }}</p>
 

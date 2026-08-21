@@ -12,8 +12,8 @@ export default defineConfig({
         name: 'Easy Fut',
         short_name: 'Easy Fut',
         description: 'Gestão de partidas e mensalidades do grupo',
-        theme_color: '#0B1210',
-        background_color: '#0B1210',
+        theme_color: '#0C100F',
+        background_color: '#0C100F',
         display: 'standalone',
         lang: 'pt-BR',
         icons: [

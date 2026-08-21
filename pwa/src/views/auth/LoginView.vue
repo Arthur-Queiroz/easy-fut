@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { errorMessage } from '../../api/client'
 import { useAuthStore } from '../../stores/auth'
 import NavIcon from '../../components/layout/NavIcon.vue'
+import PasswordInput from '../../components/ui/PasswordInput.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -30,7 +31,7 @@ async function submit() {
 <template>
   <div
     class="flex min-h-dvh w-full flex-col px-7 pb-12 pt-24 text-white md:grid md:grid-cols-2 md:items-center md:gap-20 md:px-[12vw] md:py-16"
-    style="background-image: linear-gradient(165deg, #0b1210 0%, #132a20 45%, #102a20 100%)"
+    style="background-image: linear-gradient(165deg, #0c100f 0%, #13251f 45%, #0f3325 100%)"
   >
     <div class="flex flex-col items-center text-center md:items-start md:text-left">
       <div class="flex h-[92px] w-[92px] items-center justify-center rounded-full border-2 border-lime bg-lime/10 text-lime">
@@ -54,17 +55,18 @@ async function submit() {
           placeholder="voce@email.com"
         />
       </label>
-      <label class="flex flex-col gap-1.5">
-        <span class="text-[13px] font-semibold text-white/70 md:text-ink2">Senha</span>
-        <input
+      <!-- Sem <label> envolvendo: o botão de ocultar entraria no nome acessível do campo. -->
+      <div class="flex flex-col gap-1.5">
+        <label for="login-password" class="text-[13px] font-semibold text-white/70 md:text-ink2">Senha</label>
+        <PasswordInput
+          id="login-password"
           v-model="password"
-          type="password"
+          variant="on-dark"
           required
           autocomplete="current-password"
-          class="h-[50px] rounded-xl border border-white/15 bg-white/5 px-4 text-[15px] text-white outline-none placeholder:text-white/40 focus:border-lime md:border-border md:bg-bg md:text-ink md:placeholder:text-ink3 md:focus:border-brand"
           placeholder="••••••••"
         />
-      </label>
+      </div>
 
       <router-link :to="{ name: 'forgot-password' }" class="-mt-1 text-right text-[13px] font-semibold text-lime md:text-brand">
         Esqueceu sua senha?

@@ -221,7 +221,7 @@ const monthOptions = computed(() => {
     <div class="grid gap-4 xl:grid-cols-[360px_1fr]">
       <div class="flex flex-col gap-3.5">
         <!-- Fotografia do rateio gerado -->
-        <div v-if="batch" class="rounded-2xl p-5 text-white" style="background-image: linear-gradient(150deg, #0b1210, #132a20)">
+        <div v-if="batch" class="rounded-2xl p-5 text-white" style="background-image: linear-gradient(150deg, #0c100f, #13251f)">
           <div class="text-[11px] font-bold tracking-[.1em] text-white/55">
             {{ formatMonth(batch.reference_month).toUpperCase() }} · GERADA
           </div>

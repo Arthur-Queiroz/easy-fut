@@ -30,7 +30,7 @@ async function logout() {
     <!-- Sidebar desktop / barra superior mobile -->
     <aside
       class="flex shrink-0 flex-row items-center gap-1 overflow-x-auto px-3 py-2 lg:min-h-dvh lg:w-[216px] lg:flex-col lg:items-stretch lg:gap-0 lg:px-3 lg:py-[18px]"
-      style="background-image: linear-gradient(180deg, #0b1210, #132a20)"
+      style="background-image: linear-gradient(180deg, #0c100f, #13251f)"
     >
       <router-link to="/" class="hidden items-center gap-2.5 px-2 pb-[18px] lg:flex" title="Voltar ao app">
         <span

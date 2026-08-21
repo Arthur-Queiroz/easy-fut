@@ -32,7 +32,7 @@ async function logout() {
 <template>
   <div
     class="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center px-7 text-center text-white"
-    style="background-image: linear-gradient(165deg, #0b1210 0%, #132a20 45%, #102a20 100%)"
+    style="background-image: linear-gradient(165deg, #0c100f 0%, #13251f 45%, #0f3325 100%)"
   >
     <div class="flex h-[92px] w-[92px] items-center justify-center rounded-full border-2 border-[#F17070] bg-[#F17070]/10 text-[#F17070]">
       <NavIcon name="x" :size="40" :stroke-width="2" />
