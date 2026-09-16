@@ -99,6 +99,9 @@ export interface Charge {
   user_name: string
   user_role: 'admin' | 'player'
   avatar_color: string
+  batch_id: string
+  batch_kind: 'monthly' | 'match'
+  batch_title: string
   reference_month: string
   amount_cents: number
   status: ChargeStatus
@@ -113,6 +116,8 @@ export interface Charge {
 
 export interface ChargeBatch {
   id: string
+  kind: 'monthly' | 'match'
+  title: string
   reference_month: string
   total_amount_cents: number
   user_count: number

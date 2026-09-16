@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { api, errorMessage } from '../../api/client'
-import type { Charge, User } from '../../api/types'
+import type { Charge, ChargeBatch, User } from '../../api/types'
 import { formatCents, formatDMY, formatMonth } from '../../lib/format'
 import AdminLayout from '../../components/layout/AdminLayout.vue'
 import NavIcon from '../../components/layout/NavIcon.vue'
@@ -65,7 +65,7 @@ async function openUser(user: User) {
   error.value = ''
   selectedCharges.value = []
   // Reaproveita a listagem de cobranças do mês; o detalhe mostra as do usuário.
-  const { data } = await api.get<{ charges: Charge[] }>('/admin/charges')
+  const { data } = await api.get<{ batches: ChargeBatch[]; charges: Charge[] }>('/admin/charges')
   selectedCharges.value = (data.charges ?? []).filter((c) => c.user_id === user.id)
 }
 
