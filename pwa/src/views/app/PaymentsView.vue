@@ -88,7 +88,7 @@ function statusBadge(charge: Charge): { tone: 'success' | 'warn' | 'danger' | 'n
       </div>
 
       <div class="grid gap-3.5 lg:grid-cols-[1.1fr_1fr] lg:items-start">
-        <div class="flex flex-col gap-3.5">
+        <div class="flex min-w-0 flex-col gap-3.5">
           <!-- Uma cobrança em aberto por card -->
           <Card v-for="charge in openCharges" :key="charge.id" class="p-4 lg:p-6">
             <div class="flex flex-wrap items-center justify-between gap-2">
@@ -165,7 +165,7 @@ function statusBadge(charge: Charge): { tone: 'success' | 'warn' | 'danger' | 'n
         </div>
 
         <!-- Histórico -->
-        <Card class="p-4 lg:p-6">
+        <Card class="min-w-0 p-4 lg:p-6">
           <SectionLabel>Histórico de pagamentos</SectionLabel>
           <div class="mt-2.5 flex flex-col">
             <div
