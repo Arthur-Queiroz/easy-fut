@@ -8,6 +8,7 @@ import {
   formatHour, formatTimestamp, monthShort, weekdayShort,
 } from '../../lib/format'
 import AdminLayout from '../../components/layout/AdminLayout.vue'
+import DrawTeamsModal from '../../components/admin/DrawTeamsModal.vue'
 import NavIcon from '../../components/layout/NavIcon.vue'
 import Avatar from '../../components/ui/Avatar.vue'
 import Badge from '../../components/ui/Badge.vue'
@@ -17,6 +18,7 @@ import SectionLabel from '../../components/ui/SectionLabel.vue'
 
 const router = useRouter()
 const data = ref<Dashboard | null>(null)
+const drawing = ref(false)
 
 onMounted(load)
 
@@ -41,8 +43,7 @@ async function closeConfirmations() {
 
 async function drawTeams() {
   if (!match.value) return
-  await api.post(`/matches/${match.value.id}/draw-teams`, { team_count: 2 })
-  router.push('/partida/times')
+  drawing.value = true
 }
 
 const dotColor = (kind: string) => {
@@ -185,5 +186,8 @@ const dotColor = (kind: string) => {
         </div>
       </Card>
     </div>
+
+    <!-- Sorteio / escalação -->
+    <DrawTeamsModal v-if="match && drawing" :match="match" @drawn="load" @close="drawing = false" />
   </AdminLayout>
 </template>

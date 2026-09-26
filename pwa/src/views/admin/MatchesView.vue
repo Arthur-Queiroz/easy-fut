@@ -4,6 +4,7 @@ import { api, errorMessage } from '../../api/client'
 import type { Match, Team } from '../../api/types'
 import { dayOfMonth, formatDateShort, formatHour, formatTimestamp, monthShort } from '../../lib/format'
 import AdminLayout from '../../components/layout/AdminLayout.vue'
+import DrawTeamsModal from '../../components/admin/DrawTeamsModal.vue'
 import NavIcon from '../../components/layout/NavIcon.vue'
 import Avatar from '../../components/ui/Avatar.vue'
 import Badge from '../../components/ui/Badge.vue'
@@ -33,7 +34,6 @@ const form = ref({
 const cancelling = ref<Match | null>(null)
 const cancelReason = ref('')
 const drawing = ref<Match | null>(null)
-const teamCount = ref(2)
 
 onMounted(load)
 
@@ -129,20 +129,6 @@ async function act(match: Match, action: string, body: object = {}) {
     await load()
   } catch (e) {
     error.value = errorMessage(e)
-  }
-}
-
-async function confirmDraw() {
-  if (!drawing.value) return
-  saving.value = true
-  try {
-    await api.post(`/matches/${drawing.value.id}/draw-teams`, { team_count: teamCount.value })
-    drawing.value = null
-    await load()
-  } catch (e) {
-    error.value = errorMessage(e)
-  } finally {
-    saving.value = false
   }
 }
 
@@ -243,7 +229,7 @@ function statusBadge(match: Match): { tone: 'success' | 'warn' | 'danger' | 'inf
                 v-if="match.status !== 'open'"
                 variant="outline"
                 size="sm"
-                @click="((drawing = match), (teamCount = teams[match.id]?.length || 2))"
+                @click="drawing = match"
               >
                 <NavIcon name="redo" :size="14" :stroke-width="1.9" />
                 {{ match.status === 'teams_drawn' ? 'Refazer sorteio' : 'Sortear times' }}
@@ -360,27 +346,8 @@ function statusBadge(match: Match): { tone: 'success' | 'warn' | 'danger' | 'inf
       </form>
     </Modal>
 
-    <!-- Sorteio -->
-    <Modal :open="drawing !== null" title="Sortear times" @close="drawing = null">
-      <div class="flex flex-col gap-4">
-        <p class="text-sm text-ink2">
-          {{ drawing?.going_count }} jogadores confirmados serão distribuídos aleatoriamente, com diferença máxima de um
-          jogador entre os times.
-        </p>
-        <label class="flex flex-col gap-1.5">
-          <span class="text-[12.5px] font-semibold text-ink2">Quantidade de times</span>
-          <select v-model.number="teamCount" class="field">
-            <option :value="2">2 times</option>
-            <option :value="3">3 times</option>
-            <option :value="4">4 times</option>
-          </select>
-        </label>
-        <p v-if="drawing?.status === 'teams_drawn'" class="rounded-xl bg-warnBg px-3.5 py-2.5 text-[12.5px] text-warn">
-          Refazer o sorteio descarta a distribuição atual e grava uma nova versão.
-        </p>
-        <BaseButton :loading="saving" @click="confirmDraw">Sortear</BaseButton>
-      </div>
-    </Modal>
+    <!-- Sorteio / escalação -->
+    <DrawTeamsModal v-if="drawing" :match="drawing" @drawn="load" @close="drawing = null" />
 
     <!-- Cancelamento -->
     <Modal :open="cancelling !== null" title="Cancelar partida" @close="cancelling = null">
