@@ -91,6 +91,14 @@ export interface TeamMember {
   avatar_color: string
 }
 
+// Grupo salvo de jogadores para agilizar a escalação manual (admin).
+export interface TeamPreset {
+  id: string
+  name: string
+  member_ids: string[]
+  created_at: string
+}
+
 export type ChargeStatus = 'pending' | 'paid' | 'manual_paid' | 'overdue' | 'cancelled' | 'exempt'
 
 export interface Charge {
@@ -181,7 +189,7 @@ export interface MatchDetail {
   teams: Team[]
   media: Media[]
   is_participant: boolean
-  my_votes: Record<string, string>
+  my_votes: Record<string, string[]>
   results: VoteResult[] | null
 }
 
