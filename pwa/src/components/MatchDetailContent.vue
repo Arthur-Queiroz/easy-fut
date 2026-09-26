@@ -41,11 +41,23 @@ async function vote(category: 'top_scorer' | 'worst_player', candidateId: string
   if (!canVote.value) return
   error.value = ''
   try {
-    await api.post(`/matches/${props.matchId}/votes`, { category, candidate_id: candidateId })
+    if (votesFor(category).includes(candidateId)) {
+      await api.delete(`/matches/${props.matchId}/votes/${category}/${candidateId}`)
+    } else {
+      if (votesFor(category).length >= 2) {
+        error.value = 'Você já escolheu 2 jogadores nesta categoria. Desmarque um para trocar.'
+        return
+      }
+      await api.post(`/matches/${props.matchId}/votes`, { category, candidate_id: candidateId })
+    }
     await load()
   } catch (e) {
     error.value = errorMessage(e)
   }
+}
+
+function votesFor(category: string): string[] {
+  return detail.value?.my_votes[category] ?? []
 }
 
 async function uploadMedia(event: Event) {
@@ -170,7 +182,7 @@ function resultFor(category: string) {
               </span>
               Vote no artilheiro
             </span>
-            <span class="text-[11.5px] font-medium text-ink3">1 voto por categoria</span>
+            <span class="text-[11.5px] font-medium text-ink3">{{ votesFor('top_scorer').length }}/2 votos</span>
           </div>
           <div class="flex flex-col gap-2">
             <button
@@ -179,15 +191,15 @@ function resultFor(category: string) {
               type="button"
               :disabled="!canVote"
               class="flex items-center gap-2.5 rounded-xl px-3 py-[9px] text-left disabled:opacity-60"
-              :class="detail.my_votes.top_scorer === player.user_id ? 'border-2 border-brand bg-brandSoft' : 'border border-border'"
+              :class="votesFor('top_scorer').includes(player.user_id) ? 'border-2 border-brand bg-brandSoft' : 'border border-border'"
               @click="vote('top_scorer', player.user_id)"
             >
               <Avatar :name="player.name" :color="player.avatar_color" size="sm" />
-              <span class="flex-1 text-sm" :class="detail.my_votes.top_scorer === player.user_id ? 'font-semibold' : 'font-medium'">
+              <span class="flex-1 text-sm" :class="votesFor('top_scorer').includes(player.user_id) ? 'font-semibold' : 'font-medium'">
                 {{ player.user_id === auth.user?.id ? 'Você' : player.name }}
               </span>
               <span
-                v-if="detail.my_votes.top_scorer === player.user_id"
+                v-if="votesFor('top_scorer').includes(player.user_id)"
                 class="flex h-5 w-5 items-center justify-center rounded-full bg-brand"
               >
                 <NavIcon name="check" :size="11" :stroke-width="3" class="text-white" />
@@ -203,7 +215,7 @@ function resultFor(category: string) {
               <span class="inline-flex h-7 w-7 items-center justify-center rounded-[9px] bg-warnBg text-[15px]">🥴</span>
               Vote no perna de pau
             </span>
-            <span class="text-[11.5px] font-medium text-ink3">Sem voto em si mesmo</span>
+            <span class="text-[11.5px] font-medium text-ink3">{{ votesFor('worst_player').length }}/2 votos · sem voto em si mesmo</span>
           </div>
           <div class="flex flex-col gap-2">
             <button
@@ -212,15 +224,15 @@ function resultFor(category: string) {
               type="button"
               :disabled="!canVote"
               class="flex items-center gap-2.5 rounded-xl px-3 py-[9px] text-left disabled:opacity-60"
-              :class="detail.my_votes.worst_player === player.user_id ? 'border-2 border-warn bg-warnBg' : 'border border-border'"
+              :class="votesFor('worst_player').includes(player.user_id) ? 'border-2 border-warn bg-warnBg' : 'border border-border'"
               @click="vote('worst_player', player.user_id)"
             >
               <Avatar :name="player.name" :color="player.avatar_color" size="sm" />
-              <span class="flex-1 text-sm" :class="detail.my_votes.worst_player === player.user_id ? 'font-semibold' : 'font-medium'">
+              <span class="flex-1 text-sm" :class="votesFor('worst_player').includes(player.user_id) ? 'font-semibold' : 'font-medium'">
                 {{ player.name }}
               </span>
               <span
-                v-if="detail.my_votes.worst_player === player.user_id"
+                v-if="votesFor('worst_player').includes(player.user_id)"
                 class="flex h-5 w-5 items-center justify-center rounded-full bg-warn"
               >
                 <NavIcon name="check" :size="11" :stroke-width="3" class="text-white" />

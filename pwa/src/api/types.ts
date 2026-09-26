@@ -181,7 +181,7 @@ export interface MatchDetail {
   teams: Team[]
   media: Media[]
   is_participant: boolean
-  my_votes: Record<string, string>
+  my_votes: Record<string, string[]>
   results: VoteResult[] | null
 }
 
