@@ -11,7 +11,7 @@ api.interceptors.response.use(
     const code = error.response?.data?.code
     const route = router.currentRoute.value
     if (status === 401 && !route.meta.public) {
-      router.push({ name: 'login' })
+      router.push({ name: 'login', query: { redirect: route.fullPath } })
     } else if (status === 403 && code === 'inactive' && route.name !== 'blocked') {
       router.push({ name: 'blocked' })
     }

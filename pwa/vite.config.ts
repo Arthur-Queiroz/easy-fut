@@ -29,11 +29,13 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ['/push-sw.js'],
         // A API nunca deve ser servida do cache offline.
         navigateFallbackDenylist: [/^\/api\//],
       },
     }),
   ],
+  preview: { proxy: { '/api': 'http://localhost:8080' } },
   server: {
     port: 5173,
     proxy: {

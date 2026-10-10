@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { api } from '../../api/client'
 import type { NextMatch } from '../../api/types'
 import { countdown, formatDateLong, formatHour } from '../../lib/format'
@@ -9,12 +10,13 @@ import Card from '../../components/ui/Card.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import SectionLabel from '../../components/ui/SectionLabel.vue'
 
+const route = useRoute()
 const next = ref<NextMatch | null>(null)
 
 onMounted(load)
 
 async function load() {
-  const { data } = await api.get<NextMatch>('/matches/next')
+  const { data } = await api.get<NextMatch>(typeof route.query.match === 'string' ? `/matches/${encodeURIComponent(route.query.match)}` : '/matches/next')
   next.value = data
 }
 

@@ -39,7 +39,7 @@ router.beforeEach(async (to) => {
   const auth = useAuthStore()
   if (!auth.loaded) await auth.fetchMe()
 
-  if (!auth.isLoggedIn) return { name: 'login' }
+  if (!auth.isLoggedIn) return { name: 'login', query: { redirect: to.fullPath } }
   if (to.name !== 'blocked' && to.name !== 'profile' && to.name !== 'payments' && !auth.isActive) {
     return { name: 'blocked' }
   }
