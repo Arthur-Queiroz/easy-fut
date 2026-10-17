@@ -38,10 +38,10 @@ SEED_ADMIN_EMAIL="admin@local" SEED_ADMIN_PASSWORD="admin12345" \
 go run ./cmd/api
 ```
 
-## Repo frontend
+## Frontend
 
-O frontend (Vue 3 + Vite) vive em `fut-app-org/fut-app-pwa`. Este repo e o frontend são versionados e deployados independentemente.
+O frontend (Vue 3 + Vite) vive em `../pwa`, no mesmo monorepo `Arthur-Queiroz/easy-fut`. API e PWA são deployadas como serviços separados (`api` e `web`).
 
 ## Documentação completa
 
-Ver `../README.md`, `../STACK.md` e `../requisitos.md` no workspace raiz (`fut-app/`).
+Ver `../README.md` e `../AGENTS.md` na raiz do monorepo.

@@ -10,7 +10,7 @@ docker compose up -d postgres
 go run ./cmd/api
 ```
 
-Copie `.env.example` para `.env` ao executar por Docker. A PWA e publicada por um repositorio separado e alcanca esta API pela rede Docker externa `fut-app`.
+Copie `.env.example` para `.env` ao executar por Docker. A PWA fica em `../pwa`, e publicada como um servico separado e alcanca esta API pela rede Docker externa `fut-app`.
 
 ## Verificacao
 

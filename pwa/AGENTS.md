@@ -38,10 +38,10 @@ npm run dev          # dev server (proxy /api → :8080)
 
 O `vite.config.ts` já proxy de `/api/*` para `http://localhost:8080` — suba a API Go antes.
 
-## Repo backend
+## Backend
 
-A API (Go + chi + Postgres) vive em `fut-app-org/fut-app-api`. Este repo e a API são versionados e deployados independentemente.
+A API (Go + chi + Postgres) vive em `../api`, no mesmo monorepo `Arthur-Queiroz/easy-fut`. API e PWA são deployadas como serviços separados (`api` e `web`).
 
 ## Documentação completa
 
-Ver `../README.md`, `../STACK.md` (design tokens, rotas) e `../requisitos.md` no workspace raiz (`fut-app/`).
+Ver `../README.md` e `../AGENTS.md` na raiz do monorepo.

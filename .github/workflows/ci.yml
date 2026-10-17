@@ -1,0 +1,171 @@
+name: CI and deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# PRs da mesma branch cancelam a execucao anterior; na main nada e cancelado
+# para nunca interromper um deploy no meio.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Cada lado so roda quando seus arquivos (ou este workflow) mudam.
+  # workflow_dispatch roda tudo.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      api: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.api == 'true' }}
+      pwa: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.pwa == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'api/**'
+              - '.github/workflows/ci.yml'
+            pwa:
+              - 'pwa/**'
+              - '.github/workflows/ci.yml'
+
+  api-backend:
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: futapp
+          POSTGRES_PASSWORD: ci-only
+          POSTGRES_DB: futapp_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U futapp -d futapp_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://futapp:ci-only@localhost:5432/futapp_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.3'
+          cache-dependency-path: api/go.sum
+      - run: test -z "$(gofmt -l .)"
+      - run: bash -n scripts/*.sh
+      - run: go vet ./...
+      - run: go test ./...
+      - uses: dominikh/staticcheck-action@v1
+        with:
+          version: latest
+          install-go: false
+          working-directory: api
+
+  api-compose:
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    env:
+      POSTGRES_USER: futapp
+      POSTGRES_PASSWORD: ci-only
+      POSTGRES_DB: futapp
+      JWT_SECRET: ci-only-secret
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config
+      - run: docker compose build
+
+  pwa-frontend:
+    needs: changes
+    if: needs.changes.outputs.pwa == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pwa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: pwa/package-lock.json
+      - run: npm ci
+      - run: npm run test
+      - run: npm run build
+
+  pwa-compose:
+    needs: changes
+    if: needs.changes.outputs.pwa == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pwa
+    env:
+      DOMAIN: ci.fut-app.invalid
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config
+      - run: docker compose build
+
+  # Release via reusable workflow do vps-infra: build+push GHCR por digest +
+  # deploy via chave confinada deploy-fut-app. Gateado por DEPLOY_ENABLED.
+  release-api:
+    needs: [api-backend, api-compose]
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    permissions:
+      contents: read
+      packages: write
+    concurrency:
+      group: fut-app-api-production
+      cancel-in-progress: false
+    uses: Arthur-Queiroz/vps-deploy/.github/workflows/app-deploy.yml@main
+    with:
+      app-id: fut-app
+      service: api
+      image-repo: arthur-queiroz/easy-fut-api
+      context: api
+    secrets:
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+
+  # A PWA depende da API publicada (ex.: /api/push/config), entao quando os dois
+  # lados mudam no mesmo push a web so sai depois do release da API.
+  release-web:
+    needs: [changes, pwa-frontend, pwa-compose, release-api]
+    if: >-
+      always()
+      && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+      && needs.pwa-frontend.result == 'success' && needs.pwa-compose.result == 'success'
+      && (needs.changes.outputs.api != 'true' || needs.release-api.result == 'success')
+    permissions:
+      contents: read
+      packages: write
+    concurrency:
+      group: fut-app-pwa-production
+      cancel-in-progress: false
+    uses: Arthur-Queiroz/vps-deploy/.github/workflows/app-deploy.yml@main
+    with:
+      app-id: fut-app
+      service: web
+      image-repo: arthur-queiroz/easy-fut-web
+      context: pwa
+    secrets:
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
