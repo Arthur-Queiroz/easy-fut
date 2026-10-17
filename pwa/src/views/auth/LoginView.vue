@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { errorMessage } from '../../api/client'
 import { useAuthStore } from '../../stores/auth'
 import NavIcon from '../../components/layout/NavIcon.vue'
 import PasswordInput from '../../components/ui/PasswordInput.vue'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 const email = ref('')
@@ -19,7 +20,8 @@ async function submit() {
   loading.value = true
   try {
     await auth.login(email.value, password.value)
-    router.push(auth.isActive ? '/' : '/bloqueado')
+    const redirect = typeof route.query.redirect === 'string' && /^\/partida(?:\?|$)/.test(route.query.redirect) ? route.query.redirect : '/'
+    router.push(auth.isActive ? redirect : '/bloqueado')
   } catch (e) {
     error.value = errorMessage(e)
   } finally {
