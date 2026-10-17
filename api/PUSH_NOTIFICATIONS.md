@@ -10,6 +10,12 @@ Há um envio por aparelho/partida/tipo, retries com backoff (até cinco tentativ
 
 Tocar no aviso abre a partida específica para responder presença. O redirect é preservado se for necessário fazer login. Desativar ou sair da conta remove a inscrição do aparelho. Um aparelho pode se inscrever em apenas uma conta por vez.
 
+## Avisos manuais
+
+Em **Admin → Avisos** o administrador escreve uma mensagem (até 240 caracteres, título opcional de até 60) e envia para todos os membros ativos ou para membros escolhidos; a seleção aceita também inativos, nunca arquivados. Só recebe quem ativou as notificações em algum aparelho; a tela mostra quantos membros e aparelhos serão alcançados antes de confirmar. Um aviso sem nenhum aparelho de destino é recusado e não fica salvo.
+
+O envio usa a mesma fila, worker, retries e limpeza de inscrições dos avisos de partida, em `broadcast_push_deliveries`. O status do usuário é conferido de novo no envio, e um aviso não entregue em 24 horas é descartado. Tocar na notificação abre o app na tela inicial. A tela lista os 20 últimos avisos com entregues, pendentes e falhas.
+
 ## Compatibilidade
 
 Use HTTPS em produção. No iPhone/iPad (iOS/iPadOS 16.4+), adicione o app à tela inicial pelo Safari e abra o ícone para habilitar notificações. Em navegadores compatíveis no Android, permita notificações. Entrega depende de permissões, conectividade, navegador e configurações do sistema; não é uma garantia de leitura.

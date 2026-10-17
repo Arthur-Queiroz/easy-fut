@@ -16,6 +16,7 @@ const items = [
   { label: 'Usuários', to: '/admin/usuarios', icon: 'users' },
   { label: 'Mensalidades', to: '/admin/mensalidades', icon: 'pix' },
   { label: 'Convites', to: '/admin/convites', icon: 'chat' },
+  { label: 'Avisos', to: '/admin/avisos', icon: 'bell' },
   { label: 'Configurações', to: '/admin/configuracoes', icon: 'gear' },
 ]
 

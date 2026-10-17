@@ -37,6 +37,7 @@ func (r *Runner) Start() {
 
 	if r.push.Enabled() {
 		mustAdd("* * * * *", r.sendMatchPush)
+		mustAdd("* * * * *", r.sendBroadcastPush)
 	}
 	mustAdd("* * * * *", r.closeExpiredConfirmations) // a cada minuto
 	mustAdd("*/10 * * * *", r.closeExpiredVoting)

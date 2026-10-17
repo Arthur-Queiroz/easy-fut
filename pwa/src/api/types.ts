@@ -198,3 +198,25 @@ export interface NextMatch {
   my_response?: Response
   confirmations?: ConfirmationEntry[]
 }
+
+export interface PushRecipient {
+  id: string
+  name: string
+  status: User['status']
+  avatar_color: string
+  devices: number
+}
+
+export interface PushBroadcast {
+  id: string
+  title: string
+  body: string
+  audience: 'all' | 'selected'
+  creator_name: string
+  created_at: string
+  users: number
+  devices: number
+  sent: number
+  pending: number
+  failed: number
+}
