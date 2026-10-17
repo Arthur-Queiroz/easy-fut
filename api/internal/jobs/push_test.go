@@ -18,3 +18,9 @@ func TestMatchPushPointsToExactMatch(t *testing.T) {
 		t.Fatal("reminder indistinguishable from new match")
 	}
 }
+func TestBroadcastPushOpensAppAndGroupsByNotice(t *testing.T) {
+	m := broadcastPushMessage(store.BroadcastDelivery{BroadcastID: "b1", Title: "Aviso", Body: "Jogo cancelado"})
+	if m.URL != "/" || m.Tag != "broadcast-b1" || m.Title != "Aviso" || m.Body != "Jogo cancelado" {
+		t.Fatalf("wrong message: %+v", m)
+	}
+}

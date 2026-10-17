@@ -61,3 +61,34 @@ func (r *Runner) sendMatchPush() {
 		}
 	}
 }
+func broadcastPushMessage(d store.BroadcastDelivery) push.Message {
+	return push.Message{Title: d.Title, Body: d.Body, URL: "/", Tag: "broadcast-" + d.BroadcastID}
+}
+func (r *Runner) sendBroadcastPush() {
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	defer cancel()
+	for i := 0; i < 50 && ctx.Err() == nil; i++ {
+		d, err := r.store.ClaimBroadcastDelivery(ctx)
+		if errors.Is(err, store.ErrNotFound) {
+			return
+		}
+		if err != nil {
+			log.Printf("push: obtendo aviso: %v", err)
+			return
+		}
+		ttl := int(time.Until(d.CreatedAt.Add(store.BroadcastMaxAge)).Seconds())
+		if ttl < 1 {
+			continue
+		}
+		status, sendErr := r.push.Send(ctx, d.Subscription, broadcastPushMessage(d), ttl)
+		completeCtx, done := context.WithTimeout(context.Background(), 5*time.Second)
+		err = r.store.CompleteBroadcastDelivery(completeCtx, d, status, sendErr)
+		done()
+		if err != nil {
+			log.Printf("push: registrando aviso: %v", err)
+		}
+		if sendErr != nil {
+			log.Printf("push: aviso %s falhou: %v", d.ID, sendErr)
+		}
+	}
+}

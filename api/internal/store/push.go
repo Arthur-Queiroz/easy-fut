@@ -14,10 +14,12 @@ func (s *Store) SavePushSubscription(ctx context.Context, userID string, sub pus
 	}
 	defer tx.Rollback(ctx)
 	// Reassigning a shared device must not inherit another account's queue.
-	_, err = tx.Exec(ctx, `delete from match_push_deliveries d using push_subscriptions p
+	for _, table := range []string{"match_push_deliveries", "broadcast_push_deliveries"} {
+		_, err = tx.Exec(ctx, `delete from `+table+` d using push_subscriptions p
  where d.subscription_id=p.id and p.endpoint=$1 and p.user_id<>$2`, sub.Endpoint, userID)
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 	_, err = tx.Exec(ctx, `insert into push_subscriptions(user_id,endpoint,p256dh,auth) values($1,$2,$3,$4)
  on conflict(endpoint) do update set user_id=excluded.user_id,p256dh=excluded.p256dh,auth=excluded.auth,updated_at=now()`, userID, sub.Endpoint, sub.Keys.P256dh, sub.Keys.Auth)
@@ -86,19 +88,25 @@ func (s *Store) ClaimPushDelivery(ctx context.Context, lead time.Duration) (Push
 	return d, err
 }
 func (s *Store) CompletePushDelivery(ctx context.Context, d PushDelivery, status int, sendErr error) error {
+	return s.completeDelivery(ctx, "match_push_deliveries", d.ID, d.SubscriptionID, d.Subscription.Endpoint, d.Attempts, status, sendErr)
+}
+
+// Same policy for every queue: 404/410 drop the device, 429/5xx/network retry with backoff.
+// table is always a package constant, never user input.
+func (s *Store) completeDelivery(ctx context.Context, table, id, subscriptionID, endpoint string, attempts, status int, sendErr error) error {
 	if status == 404 || status == 410 {
-		_, err := s.pool.Exec(ctx, `delete from push_subscriptions where id=$1 and endpoint=$2`, d.SubscriptionID, d.Subscription.Endpoint)
+		_, err := s.pool.Exec(ctx, `delete from push_subscriptions where id=$1 and endpoint=$2`, subscriptionID, endpoint)
 		return err
 	}
 	if sendErr == nil {
-		_, err := s.pool.Exec(ctx, `update match_push_deliveries set status='sent',sent_at=now() where id=$1`, d.ID)
+		_, err := s.pool.Exec(ctx, `update `+table+` set status='sent',sent_at=now() where id=$1`, id)
 		return err
 	}
 	retry := status == 0 || status == 429 || status >= 500
 	state := "pending"
-	if !retry || d.Attempts >= 5 {
+	if !retry || attempts >= 5 {
 		state = "failed"
 	}
-	_, err := s.pool.Exec(ctx, `update match_push_deliveries set status=$2,next_attempt_at=now()+($3*interval '1 second') where id=$1`, d.ID, state, 60*(1<<d.Attempts))
+	_, err := s.pool.Exec(ctx, `update `+table+` set status=$2,next_attempt_at=now()+($3*interval '1 second') where id=$1`, id, state, 60*(1<<attempts))
 	return err
 }

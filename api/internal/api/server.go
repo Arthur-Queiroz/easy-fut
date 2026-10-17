@@ -124,6 +124,10 @@ func (s *Server) Handler() http.Handler {
 
 			r.Get("/admin/settings", s.handleGetSettings)
 			r.Put("/admin/settings", s.handleUpdateSettings)
+
+			r.Get("/admin/push/recipients", s.handleListPushRecipients)
+			r.Get("/admin/push/broadcasts", s.handleListPushBroadcasts)
+			r.Post("/admin/push/broadcasts", s.handleCreatePushBroadcast)
 		})
 	})
 

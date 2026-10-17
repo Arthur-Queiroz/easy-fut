@@ -24,6 +24,7 @@ const paths: Record<string, string[]> = {
   back: ['M15 5l-7 7 7 7'],
   mail: ['M3.5 6.5L12 13l8.5-6.5'],
   download: ['M12 4v10m0 0l-4-4m4 4l4-4M4 19h16'],
+  bell: ['M6 16.5V11a6 6 0 0112 0v5.5l1.5 2h-15z', 'M10 20.5a2 2 0 004 0'],
 }
 </script>
 
