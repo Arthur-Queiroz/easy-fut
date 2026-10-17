@@ -4,7 +4,7 @@ A ativação fica no Perfil e é individual por aparelho. O service worker receb
 
 O navegador solicita permissão apenas após o jogador tocar em Ativar. No iPhone, primeiro adicionar o app à tela inicial pelo Safari. Em aparelhos sem suporte, o Perfil mostra orientações; uma permissão bloqueada precisa ser liberada nas configurações do aparelho/navegador.
 
-O frontend consulta a chave pública em `/api/push/config` e não recebe a chave privada. Publique a API antes da PWA; a preparação do Compose e das chaves VAPID está documentada em `fut-app-api/PUSH_NOTIFICATIONS.md` no repositório da API.
+O frontend consulta a chave pública em `/api/push/config` e não recebe a chave privada. Publique a API antes da PWA; a preparação do Compose e das chaves VAPID está documentada em [`api/PUSH_NOTIFICATIONS.md`](../api/PUSH_NOTIFICATIONS.md).
 
 ## Verificar
 

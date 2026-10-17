@@ -40,10 +40,10 @@ Mantenha as chaves entre deploys; trocar a pública exige nova inscrição dos a
 
 ## CI/CD e ordem de publicação
 
-1. Revisar os PRs da API e da PWA. A migration `008_match_push.sql` é aditiva; o código anterior continua compatível.
-2. Preparar as variáveis VAPID no `.env` da VPS **e no mapeamento `environment` do Compose efetivamente usado no deploy**. O Compose deste repositório inclui esse mapeamento, mas o Compose da VPS é mantido separadamente. Somente acrescentar chaves ao `.env` não as injeta no container.
-3. Publicar a API pelo merge do PR. O startup aplica a migration e registra o worker quando as chaves estão configuradas.
-4. Publicar a PWA pelo merge do PR. O novo service worker importa `/push-sw.js`; o Caddy evita cache persistente desse script.
+1. Revisar o PR (API e PWA ficam no mesmo PR do monorepo). A migration `008_match_push.sql` é aditiva; o código anterior continua compatível.
+2. Preparar as variáveis VAPID no deploy real: o container de produção é criado pelo `deployctl` a partir do manifesto `apps/fut-app.yaml` do `vps-infra` (bloco `env` do serviço `api`, com `fromSecret` para a chave privada) e de `/var/lib/vps-apps/fut-app/secrets.env`. O `compose.yaml` deste diretório não é usado em produção; acrescentar chaves só nele ou só no `secrets.env` não as injeta no container.
+3. Fazer o merge do PR. O CI publica a API primeiro; o startup aplica a migration e registra o worker quando as chaves estão configuradas.
+4. Em seguida, no mesmo workflow, o CI publica a PWA. O novo service worker importa `/push-sw.js`; o Caddy evita cache persistente desse script.
 5. No próprio aparelho, ativar notificações no Perfil e verificar o aviso na próxima criação real de partida. Nunca testar disparos com as inscrições de outros jogadores.
 
 Rollback: o código anterior da API/PWA funciona com as tabelas adicionais. Não apagar o banco nem desfazer a migration para reverter a aplicação.
