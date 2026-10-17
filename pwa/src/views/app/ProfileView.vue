@@ -13,6 +13,7 @@ import BaseButton from '../../components/ui/BaseButton.vue'
 import Card from '../../components/ui/Card.vue'
 import Modal from '../../components/ui/Modal.vue'
 import SectionLabel from '../../components/ui/SectionLabel.vue'
+import PushSettings from '../../components/pwa/PushSettings.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -173,6 +174,8 @@ async function logout() {
           </button>
         </Card>
       </div>
+
+      <PushSettings />
 
       <!-- Pagamentos -->
       <Card class="p-4">

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { api } from '../api/client'
+import { disablePush } from '../lib/push'
 import type { User, UserStats } from '../api/types'
 
 export const useAuthStore = defineStore('auth', {
@@ -33,6 +34,7 @@ export const useAuthStore = defineStore('auth', {
       this.loaded = true
     },
     async logout() {
+      await disablePush()
       await api.post('/logout')
       this.user = null
       this.stats = null
