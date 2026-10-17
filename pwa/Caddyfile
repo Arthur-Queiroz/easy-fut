@@ -1,0 +1,28 @@
+# Cloudflare Tunnel terminates public TLS; este Caddy so fala HTTP interno.
+# Responde em qualquer Host de proposito: o Caddy da edge encaminha usando o
+# dominio, mas o healthcheck do deployctl bate direto no IP do container --
+# um site fixado em {$DOMAIN} devolveria 404 para ele e barraria o release.
+:80 {
+	encode gzip zstd
+
+	handle /api/* {
+		reverse_proxy fut-app-api:8080
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+
+		@hashed path /assets/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		header /index.html Cache-Control "no-cache"
+		header /sw.js Cache-Control "no-cache"
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
