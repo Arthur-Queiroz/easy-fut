@@ -176,7 +176,7 @@ func (s *Server) handleVote(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &body) {
 		return
 	}
-	if body.Category != "top_scorer" && body.Category != "worst_player" {
+	if !validVoteCategory(body.Category) {
 		writeError(w, http.StatusBadRequest, "categoria inválida")
 		return
 	}
@@ -243,7 +243,7 @@ func (s *Server) handleRemoveVote(w http.ResponseWriter, r *http.Request) {
 	candidateID := r.PathValue("candidateId")
 	user := currentUser(r)
 
-	if category != "top_scorer" && category != "worst_player" {
+	if !validVoteCategory(category) {
 		writeError(w, http.StatusBadRequest, "categoria inválida")
 		return
 	}
@@ -469,9 +469,13 @@ func (s *Server) logVoteWinners(r *http.Request, matchID string) {
 	}
 	for _, res := range results {
 		for _, winner := range res.Winners {
+			// FUT-005: label por categoria (inclui "melhor gol")
 			label := "artilheiro"
-			if res.Category == "worst_player" {
+			switch res.Category {
+			case "worst_player":
 				label = "perna de pau"
+			case "best_goal":
+				label = "melhor gol"
 			}
 			s.store.LogActivity(r.Context(), nil, "vote_result",
 				fmt.Sprintf("%s foi eleito %s da partida", winner.Name, label))

@@ -76,9 +76,13 @@ func (r *Runner) closeExpiredVoting() {
 			continue
 		}
 		for _, res := range results {
+			// FUT-005: label por categoria (inclui "melhor gol")
 			label := "artilheiro"
-			if res.Category == "worst_player" {
+			switch res.Category {
+			case "worst_player":
 				label = "perna de pau"
+			case "best_goal":
+				label = "melhor gol"
 			}
 			for _, winner := range res.Winners {
 				r.store.LogActivity(ctx, nil, "vote_result",

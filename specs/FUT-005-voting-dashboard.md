@@ -1,6 +1,6 @@
 # FUT-005 — Votação ampliada: categoria "melhor gol" + dashboard de votos
 
-**Status:** draft (a implementar depois do FUT-004)
+**Status:** implemented (PR fut/005-voting-dashboard)
 **Tipo:** vertical (API + PWA admin + PWA app)
 
 **Origem:** dois pedidos do Arthur em sequência — (a) terceira categoria de voto "melhor gol" além de artilheiro e perna de pau; (b) dashboard de votação no admin: ver votos por partida, pesquisar por usuário, comparar partidas.

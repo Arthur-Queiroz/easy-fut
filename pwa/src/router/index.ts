@@ -28,6 +28,7 @@ export const router = createRouter({
     { path: '/admin/mensalidades', name: 'admin-charges', component: () => import('../views/admin/ChargesView.vue'), meta: { admin: true } },
     { path: '/admin/convites', name: 'admin-invites', component: () => import('../views/admin/InvitesView.vue'), meta: { admin: true } },
     { path: '/admin/recorrencias', name: 'admin-recurring', component: () => import('../views/admin/RecurringView.vue'), meta: { admin: true } },
+    { path: '/admin/votos', name: 'admin-votes', component: () => import('../views/admin/VotesView.vue'), meta: { admin: true } },
     { path: '/admin/avisos', name: 'admin-notifications', component: () => import('../views/admin/NotificationsView.vue'), meta: { admin: true } },
     { path: '/admin/configuracoes', name: 'admin-settings', component: () => import('../views/admin/SettingsView.vue'), meta: { admin: true } },
 
