@@ -9,6 +9,7 @@ import Avatar from '../../components/ui/Avatar.vue'
 import Card from '../../components/ui/Card.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import SectionLabel from '../../components/ui/SectionLabel.vue'
+import MatchDetailContent from '../../components/MatchDetailContent.vue'
 
 const route = useRoute()
 const next = ref<NextMatch | null>(null)
@@ -62,7 +63,12 @@ function toggleResponse() {
       <div v-else class="text-[22px] font-bold">Próxima partida</div>
     </template>
 
-    <div v-if="match" class="flex flex-col gap-3 px-4 pt-4 lg:px-0 lg:pt-0">
+    <div v-if="match && match.status === 'voting'" class="px-4 pt-4 lg:px-0 lg:pt-0">
+      <!-- Partida em votação: mostrar a votação completa (FUT-002) -->
+      <MatchDetailContent :match-id="match.id" />
+    </div>
+
+    <div v-else-if="match" class="flex flex-col gap-3 px-4 pt-4 lg:px-0 lg:pt-0">
       <!-- Cabeçalho desktop -->
       <div class="hidden items-start justify-between gap-5 lg:flex">
         <div>
