@@ -65,11 +65,11 @@ onMounted(load)
 async function load() {
   try {
     const [m, s, u] = await Promise.all([
-      api.get<{ matches: Match[] }>('/matches'),
+      api.get<Match[]>('/matches'),
       api.get<{ matches: MatchVoteSummary[] }>('/admin/stats/votes'),
       api.get<{ users: VoteUser[] }>('/admin/users'),
     ])
-    matches.value = m.data.matches ?? []
+    matches.value = (Array.isArray(m.data) ? m.data : (m.data as { matches?: Match[] }).matches) ?? []
     summaries.value = (s.data as { matches?: MatchVoteSummary[] }).matches ?? []
     users.value = (u.data as { users?: VoteUser[] }).users ?? []
     // FUT-005 fix: auto-selecionar partida com votos (senão a mais recente com votação encerrada)
