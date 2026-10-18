@@ -41,6 +41,7 @@ func (r *Runner) Start() {
 	}
 	mustAdd("* * * * *", r.closeExpiredConfirmations) // a cada minuto
 	mustAdd("*/10 * * * *", r.closeExpiredVoting)
+	mustAdd("*/10 * * * *", r.openUnopenedVoting)     // FUT-001
 	mustAdd("15 0 * * *", r.markOverdueAndInactivate) // diário, 00h15
 	mustAdd("*/5 * * * *", r.sendDueNotifications)
 
@@ -82,6 +83,29 @@ func (r *Runner) closeExpiredVoting() {
 				r.store.LogActivity(ctx, nil, "vote_result",
 					fmt.Sprintf("%s foi eleito %s da partida", winner.Name, label))
 			}
+		}
+	}
+}
+
+// openUnopenedVoting (FUT-001): abre a votação de partidas que já acabaram e
+// dependiam de clique manual do admin. O delay e a duração vêm de settings —
+// voting_open_delay_min (default 0, abre no próprio tick pós-fim) e
+// voting_close_days (default 2, condição já documentada na spec).
+func (r *Runner) openUnopenedVoting() {
+	ctx := context.Background()
+	delayMin := r.store.SettingInt(ctx, "voting_open_delay_min", 0)
+	days := r.store.SettingInt(ctx, "voting_close_days", 2)
+
+	ids, err := r.store.OpenExpiredVoting(ctx, delayMin, days)
+	if err != nil {
+		log.Printf("job abrir votação: %v", err)
+		return
+	}
+	for _, id := range ids {
+		if m, err := r.store.MatchByID(ctx, id); err == nil {
+			r.store.LogActivity(ctx, nil, "voting_opened",
+				fmt.Sprintf("Votação aberta automaticamente — partida do dia %s",
+					m.MatchDate[8:10]+"/"+m.MatchDate[5:7]))
 		}
 	}
 }

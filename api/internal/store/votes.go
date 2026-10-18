@@ -25,6 +25,35 @@ func (s *Store) CastVote(ctx context.Context, matchID, voterID, category, candid
 	return err
 }
 
+// OpenExpiredVoting abre automaticamente a votação de partidas que já
+// terminaram (fim previsto no passado, com folga de delayMin minutos) e ainda
+// estão aguardando encerramento manual do admin — sem isso, a votação só
+// existia se o admin clicasse em "encerrar", e os jogadores não conseguiam
+// votar. Idempotente: só toca partidas em 'closed' ou 'teams_drawn'.
+// votingClosesDays define por quantos dias a votação fica aberta a partir do
+// fim da partida.
+func (s *Store) OpenExpiredVoting(ctx context.Context, delayMin, votingClosesDays int) ([]string, error) {
+	// match_date + end_time não têm fuso; a partida acontece em America/Sao_Paulo
+	// (TZ do processo em produção). A conversão é feita com fuso fixo no SQL para
+	// isolar a comparação da TZ da sessão do PostgreSQL (Etc/UTC no container).
+	rows, err := s.pool.Query(ctx, `
+		update matches m
+		set status = 'voting',
+		    finished_at = now(),
+		    voting_closes_at = (m.match_date + m.end_time)::timestamp
+		        at time zone 'America/Sao_Paulo'
+		        + make_interval(days => $2)
+		where m.status in ('closed', 'teams_drawn')
+		  and (m.match_date + m.end_time)::timestamp
+		      at time zone 'America/Sao_Paulo' <= now() - make_interval(mins => $1)
+		returning m.id`, delayMin, votingClosesDays)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return collectIDs(rows)
+}
+
 // RemoveVote desfaz um voto do usuário (clique num jogador já selecionado).
 func (s *Store) RemoveVote(ctx context.Context, matchID, voterID, category, candidateID string) error {
 	_, err := s.pool.Exec(ctx, `
