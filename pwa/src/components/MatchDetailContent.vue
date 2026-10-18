@@ -21,8 +21,133 @@ const error = ref('')
 const uploading = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 
-onMounted(load)
-watch(() => props.matchId, load)
+// FUT-003: rascunho de votos { top_scorer: [], worst_player: [] }.
+// Toques alteram o rascunho localmente; "Enviar votos" aplica o diff na API.
+const draft = ref<Record<string, string[]>>({})
+const submitting = ref(false)
+const savedToast = ref(false)
+let savedToastTimer: ReturnType<typeof setTimeout> | undefined
+
+function draftKey(): string {
+  return `fut-vote-draft-${props.matchId}-${auth.user?.id ?? 'anon'}`
+}
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(draftKey())
+    draft.value = raw ? JSON.parse(raw) : {}
+  } catch {
+    draft.value = {}
+  }
+}
+
+function saveDraft() {
+  try {
+    if (draftIsDirty.value) localStorage.setItem(draftKey(), JSON.stringify(draft.value))
+    else localStorage.removeItem(draftKey())
+  } catch { /* storage cheio/indisponível: rascunho fica só na tela */ }
+}
+
+// votos efetivos (persistidos) por categoria
+const persisted = computed<Record<string, string[]>>(() => ({
+  top_scorer: detail.value?.my_votes.top_scorer ?? [],
+  worst_player: detail.value?.my_votes.worst_player ?? [],
+}))
+
+// o que o usuário vê marcado: rascunho se existe, senão o persistido
+const marks = computed<Record<string, string[]>>(() => ({
+  top_scorer: draft.value.top_scorer ?? persisted.value.top_scorer ?? [],
+  worst_player: draft.value.worst_player ?? persisted.value.worst_player ?? [],
+}))
+
+const draftIsDirty = computed(() => {
+  for (const c of ['top_scorer', 'worst_player']) {
+    const d = [...(draft.value[c] ?? [])].sort()
+    const p = [...(persisted.value[c] ?? [])].sort()
+    if (d.join(',') !== p.join(',')) return true
+  }
+  return false
+})
+
+function toggleMark(category: 'top_scorer' | 'worst_player', candidateId: string) {
+  if (!canVote.value) return
+  const cur = [...(draft.value[category] ?? persisted.value[category] ?? [])]
+  const idx = cur.indexOf(candidateId)
+  if (idx >= 0) cur.splice(idx, 1)
+  else {
+    if (cur.length >= 2) {
+      error.value = 'Escolha no máximo 2 jogadores. Desmarque um para trocar.'
+      return
+    }
+    cur.push(candidateId)
+  }
+  draft.value = { ...draft.value, [category]: cur }
+  error.value = ''
+  saveDraft()
+}
+
+// diff rascunho → persistido: o que adicionar e o que remover
+function draftDiff() {
+  const toAdd: { category: string; candidateId: string }[] = []
+  const toRemove: { category: string; candidateId: string }[] = []
+  for (const c of ['top_scorer', 'worst_player'] as const) {
+    const m = marks.value[c]
+    const p = persisted.value[c]
+    for (const id of m) if (!p.includes(id)) toAdd.push({ category: c, candidateId: id })
+    for (const id of p) if (!m.includes(id)) toRemove.push({ category: c, candidateId: id })
+  }
+  return { toAdd, toRemove }
+}
+
+async function submitVotes() {
+  if (submitting.value || !votingOpen.value) return
+  const { toAdd, toRemove } = draftDiff()
+  if (toAdd.length === 0 && toRemove.length === 0) {
+    savedToast.value = true
+    resetToastTimer()
+    return
+  }
+  submitting.value = true
+  error.value = ''
+  try {
+    const calls = [
+      ...toRemove.map((v) => api.delete(`/matches/${props.matchId}/votes/${v.category}/${v.candidateId}`)),
+      ...toAdd.map((v) => api.post(`/matches/${props.matchId}/votes`, { category: v.category, candidate_id: v.candidateId })),
+    ]
+    await Promise.all(calls)
+    draft.value = {}
+    saveDraft()
+    await load()
+    savedToast.value = true
+    resetToastTimer()
+  } catch (e) {
+    error.value = errorMessage(e)
+  } finally {
+    submitting.value = false
+  }
+}
+
+// auto-envio: sair da tela ou fechar o app com rascunho sujo envia o resto.
+window.addEventListener('pagehide', () => {
+  if (draftIsDirty.value && !submitting.value) {
+    const { toAdd, toRemove } = draftDiff()
+    void api.get(`/matches/${props.matchId}`).then(() => {
+      for (const v of toAdd) void api.post(`/matches/${props.matchId}/votes`, { category: v.category, candidate_id: v.candidateId }).catch(() => {})
+      for (const v of toRemove) void api.delete(`/matches/${props.matchId}/votes/${v.category}/${v.candidateId}`).catch(() => {})
+    }).catch(() => {})
+  }
+})
+
+function resetToastTimer() {
+  if (savedToastTimer) clearTimeout(savedToastTimer)
+  savedToastTimer = setTimeout(() => { savedToast.value = false }, 3000)
+}
+
+onMounted(() => {
+  load()
+  loadDraft()
+})
+watch(() => props.matchId, () => { load(); loadDraft() })
 
 async function load() {
   if (!props.matchId) return
@@ -36,29 +161,6 @@ const participants = computed<ConfirmationEntry[]>(
 )
 const votingOpen = computed(() => match.value?.status === 'voting')
 const canVote = computed(() => votingOpen.value && detail.value?.is_participant)
-
-async function vote(category: 'top_scorer' | 'worst_player', candidateId: string) {
-  if (!canVote.value) return
-  error.value = ''
-  try {
-    if (votesFor(category).includes(candidateId)) {
-      await api.delete(`/matches/${props.matchId}/votes/${category}/${candidateId}`)
-    } else {
-      if (votesFor(category).length >= 2) {
-        error.value = 'Você já escolheu 2 jogadores nesta categoria. Desmarque um para trocar.'
-        return
-      }
-      await api.post(`/matches/${props.matchId}/votes`, { category, candidate_id: candidateId })
-    }
-    await load()
-  } catch (e) {
-    error.value = errorMessage(e)
-  }
-}
-
-function votesFor(category: string): string[] {
-  return detail.value?.my_votes[category] ?? []
-}
 
 async function uploadMedia(event: Event) {
   const input = event.target as HTMLInputElement
@@ -182,7 +284,7 @@ function resultFor(category: string) {
               </span>
               Vote no artilheiro
             </span>
-            <span class="text-[11.5px] font-medium text-ink3">{{ votesFor('top_scorer').length }}/2 votos</span>
+            <span class="text-[11.5px] font-medium text-ink3">{{ marks.top_scorer.length }}/2 votos</span>
           </div>
           <div class="flex flex-col gap-2">
             <button
@@ -191,15 +293,15 @@ function resultFor(category: string) {
               type="button"
               :disabled="!canVote"
               class="flex items-center gap-2.5 rounded-xl px-3 py-[9px] text-left disabled:opacity-60"
-              :class="votesFor('top_scorer').includes(player.user_id) ? 'border-2 border-brand bg-brandSoft' : 'border border-border'"
-              @click="vote('top_scorer', player.user_id)"
+              :class="marks.top_scorer.includes(player.user_id) ? 'border-2 border-brand bg-brandSoft' : 'border border-border'"
+              @click="toggleMark('top_scorer', player.user_id)"
             >
               <Avatar :name="player.name" :color="player.avatar_color" size="sm" />
-              <span class="flex-1 text-sm" :class="votesFor('top_scorer').includes(player.user_id) ? 'font-semibold' : 'font-medium'">
+              <span class="flex-1 text-sm" :class="marks.top_scorer.includes(player.user_id) ? 'font-semibold' : 'font-medium'">
                 {{ player.user_id === auth.user?.id ? 'Você' : player.name }}
               </span>
               <span
-                v-if="votesFor('top_scorer').includes(player.user_id)"
+                v-if="marks.top_scorer.includes(player.user_id)"
                 class="flex h-5 w-5 items-center justify-center rounded-full bg-brand"
               >
                 <NavIcon name="check" :size="11" :stroke-width="3" class="text-white" />
@@ -215,7 +317,7 @@ function resultFor(category: string) {
               <span class="inline-flex h-7 w-7 items-center justify-center rounded-[9px] bg-warnBg text-[15px]">🥴</span>
               Vote no perna de pau
             </span>
-            <span class="text-[11.5px] font-medium text-ink3">{{ votesFor('worst_player').length }}/2 votos · sem voto em si mesmo</span>
+            <span class="text-[11.5px] font-medium text-ink3">{{ marks.worst_player.length }}/2 votos · sem voto em si mesmo</span>
           </div>
           <div class="flex flex-col gap-2">
             <button
@@ -224,15 +326,15 @@ function resultFor(category: string) {
               type="button"
               :disabled="!canVote"
               class="flex items-center gap-2.5 rounded-xl px-3 py-[9px] text-left disabled:opacity-60"
-              :class="votesFor('worst_player').includes(player.user_id) ? 'border-2 border-warn bg-warnBg' : 'border border-border'"
-              @click="vote('worst_player', player.user_id)"
+              :class="marks.worst_player.includes(player.user_id) ? 'border-2 border-warn bg-warnBg' : 'border border-border'"
+              @click="toggleMark('worst_player', player.user_id)"
             >
               <Avatar :name="player.name" :color="player.avatar_color" size="sm" />
-              <span class="flex-1 text-sm" :class="votesFor('worst_player').includes(player.user_id) ? 'font-semibold' : 'font-medium'">
+              <span class="flex-1 text-sm" :class="marks.worst_player.includes(player.user_id) ? 'font-semibold' : 'font-medium'">
                 {{ player.name }}
               </span>
               <span
-                v-if="votesFor('worst_player').includes(player.user_id)"
+                v-if="marks.worst_player.includes(player.user_id)"
                 class="flex h-5 w-5 items-center justify-center rounded-full bg-warn"
               >
                 <NavIcon name="check" :size="11" :stroke-width="3" class="text-white" />
@@ -244,6 +346,26 @@ function resultFor(category: string) {
             Somente quem participou da partida pode votar.
           </p>
         </Card>
+
+        <!-- Botão de envio (FUT-003) -->
+        <div v-if="canVote" class="sticky bottom-[65px] z-10 flex flex-col gap-2">
+          <button
+            type="button"
+            :disabled="submitting"
+            class="flex h-[50px] items-center justify-center gap-2 rounded-[13px] text-[15px] font-bold shadow-lg transition"
+            :class="
+              draftIsDirty
+                ? 'bg-brand text-brandInk'
+                : 'bg-surface text-ink3 border border-border'
+            "
+            @click="submitVotes"
+          >
+            <template v-if="submitting">Enviando…</template>
+            <template v-else-if="draftIsDirty">Enviar votos</template>
+            <template v-else>Votos registrados ✓</template>
+          </button>
+          <p v-if="savedToast" class="text-center text-[12.5px] font-semibold text-brand">Votos registrados ✓</p>
+        </div>
       </template>
 
       <!-- Participantes -->
