@@ -6,6 +6,7 @@ import type { ConfirmationEntry, MatchDetail } from '../api/types'
 import { useAuthStore } from '../stores/auth'
 import { formatDateShort, formatTimestamp } from '../lib/format'
 import { safeColor, safeUrl, validateMediaFile } from '../lib/security'
+import type { VoteCategory } from '../api/types'
 import NavIcon from './layout/NavIcon.vue'
 import Avatar from './ui/Avatar.vue'
 import Card from './ui/Card.vue'
@@ -21,7 +22,22 @@ const error = ref('')
 const uploading = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 
-// FUT-003: rascunho de votos { top_scorer: [], worst_player: [] }.
+// FUT-005: 3 categorias (best_goal herda regras do top_scorer — pode votar em si)
+const VOTE_CATEGORIES: { key: VoteCategory; label: string; icon: string; selfVote: boolean; warnColor: boolean }[] = [
+  { key: 'top_scorer', label: 'Vote no artilheiro', icon: 'trophy', selfVote: true, warnColor: false },
+  { key: 'worst_player', label: 'Vote no perna de pau', icon: '', selfVote: false, warnColor: true },
+  { key: 'best_goal', label: 'Vote no melhor gol', icon: 'ball', selfVote: true, warnColor: false },
+]
+const CATEGORY_KEYS = VOTE_CATEGORIES.map((c) => c.key)
+
+// FUT-005: categorias mostradas como resultado da partida finalizada
+const RESULT_CATEGORIES: { key: VoteCategory; resultLabel: string; icon: string; warnColor: boolean }[] = [
+  { key: 'top_scorer', resultLabel: 'Artilheiro da partida', icon: 'trophy', warnColor: false },
+  { key: 'worst_player', resultLabel: 'Perna de pau da partida', icon: '', warnColor: true },
+  { key: 'best_goal', resultLabel: 'Melhor gol da partida', icon: 'ball', warnColor: false },
+]
+
+// FUT-003: rascunho de votos { top_scorer: [], worst_player: [], best_goal: [] }.
 // Toques alteram o rascunho localmente; "Enviar votos" aplica o diff na API.
 const draft = ref<Record<string, string[]>>({})
 const submitting = ref(false)
@@ -52,16 +68,14 @@ function saveDraft() {
 const persisted = computed<Record<string, string[]>>(() => ({
   top_scorer: detail.value?.my_votes.top_scorer ?? [],
   worst_player: detail.value?.my_votes.worst_player ?? [],
+  best_goal: (detail.value?.my_votes as Record<string, string[]>).best_goal ?? [],
 }))
 
 // o que o usuário vê marcado: rascunho se existe, senão o persistido
-const marks = computed<Record<string, string[]>>(() => ({
-  top_scorer: draft.value.top_scorer ?? persisted.value.top_scorer ?? [],
-  worst_player: draft.value.worst_player ?? persisted.value.worst_player ?? [],
-}))
+const marks = computed<Record<string, string[]>>(() => ({ top_scorer: draft.value.top_scorer ?? persisted.value.top_scorer ?? [], worst_player: draft.value.worst_player ?? persisted.value.worst_player ?? [], best_goal: draft.value.best_goal ?? persisted.value.best_goal ?? [] }))
 
 const draftIsDirty = computed(() => {
-  for (const c of ['top_scorer', 'worst_player']) {
+  for (const c of CATEGORY_KEYS) {
     const d = [...(draft.value[c] ?? [])].sort()
     const p = [...(persisted.value[c] ?? [])].sort()
     if (d.join(',') !== p.join(',')) return true
@@ -69,7 +83,7 @@ const draftIsDirty = computed(() => {
   return false
 })
 
-function toggleMark(category: 'top_scorer' | 'worst_player', candidateId: string) {
+function toggleMark(category: VoteCategory, candidateId: string) {
   if (!canVote.value) return
   const cur = [...(draft.value[category] ?? persisted.value[category] ?? [])]
   const idx = cur.indexOf(candidateId)
@@ -90,7 +104,7 @@ function toggleMark(category: 'top_scorer' | 'worst_player', candidateId: string
 function draftDiff() {
   const toAdd: { category: string; candidateId: string }[] = []
   const toRemove: { category: string; candidateId: string }[] = []
-  for (const c of ['top_scorer', 'worst_player'] as const) {
+  for (const c of CATEGORY_KEYS) {
     const m = marks.value[c]
     const p = persisted.value[c]
     for (const id of m) if (!p.includes(id)) toAdd.push({ category: c, candidateId: id })
@@ -245,27 +259,26 @@ function resultFor(category: string) {
     <div class="grid gap-3 lg:grid-cols-2 lg:items-start lg:gap-4">
       <!-- Resultados (partida finalizada) -->
       <template v-if="match.status === 'finished'">
-        <Card v-for="category in ['top_scorer', 'worst_player']" :key="category" class="p-4">
+        <Card v-for="cat in RESULT_CATEGORIES" :key="cat.key" class="p-4">
           <div class="mb-[11px] flex items-center gap-[7px] text-[13px] font-bold">
             <span
               class="inline-flex h-7 w-7 items-center justify-center rounded-[9px]"
-              :class="category === 'top_scorer' ? 'bg-brandSoft text-brand' : 'bg-warnBg text-warn'"
+              :class="cat.warnColor ? 'bg-warnBg text-warn' : 'bg-brandSoft text-brand'"
             >
-              <NavIcon v-if="category === 'top_scorer'" name="trophy" :size="15" />
-              <template v-else>🥴</template>
+              <template v-if="cat.warnColor">🥴</template><NavIcon v-else :name="cat.icon" :size="15" />
             </span>
-            {{ category === 'top_scorer' ? 'Artilheiro da partida' : 'Perna de pau da partida' }}
+            {{ cat.resultLabel }}
           </div>
-          <template v-if="resultFor(category)?.winners.length">
+          <template v-if="resultFor(cat.key)?.winners.length">
             <div
-              v-for="winner in resultFor(category)!.winners"
+              v-for="winner in resultFor(cat.key)!.winners"
               :key="winner.user_id"
               class="mb-2 flex items-center gap-2.5 rounded-xl border-2 px-3 py-[9px]"
-              :class="category === 'top_scorer' ? 'border-brand bg-brandSoft' : 'border-warn bg-warnBg'"
+              :class="cat.warnColor ? 'border-warn bg-warnBg' : 'border-brand bg-brandSoft'"
             >
               <Avatar :name="winner.name" :color="winner.avatar_color" size="sm" />
               <span class="flex-1 text-sm font-semibold">{{ winner.name }}</span>
-              <span class="text-[13px] font-bold" :class="category === 'top_scorer' ? 'text-brand' : 'text-warn'">
+              <span class="text-[13px] font-bold" :class="cat.warnColor ? 'text-warn' : 'text-brand'">
                 {{ winner.votes }} {{ winner.votes === 1 ? 'voto' : 'votos' }}
               </span>
             </div>
@@ -274,75 +287,46 @@ function resultFor(category: string) {
         </Card>
       </template>
 
-      <!-- Votação aberta -->
+      <!-- Votação aberta (FUT-005: 3 categorias) -->
       <template v-else-if="votingOpen">
-        <Card class="p-4">
+        <Card v-for="cat in VOTE_CATEGORIES" :key="cat.key" class="p-4">
           <div class="mb-[11px] flex items-center justify-between">
             <span class="inline-flex items-center gap-[7px] text-[13px] font-bold">
-              <span class="inline-flex h-7 w-7 items-center justify-center rounded-[9px] bg-brandSoft text-brand">
-                <NavIcon name="trophy" :size="15" />
-              </span>
-              Vote no artilheiro
+              <span
+                class="inline-flex h-7 w-7 items-center justify-center rounded-[9px] text-[15px]"
+                :class="cat.warnColor ? 'bg-warnBg' : 'bg-brandSoft text-brand'"
+              ><template v-if="cat.warnColor">🥴</template><NavIcon v-else :name="cat.icon" :size="15" /></span>
+              {{ cat.label }}
             </span>
-            <span class="text-[11.5px] font-medium text-ink3">{{ marks.top_scorer.length }}/2 votos</span>
+            <span class="text-[11.5px] font-medium text-ink3">
+              {{ marks[cat.key].length }}/2 votos<template v-if="!cat.selfVote"> · sem voto em si mesmo</template>
+            </span>
           </div>
           <div class="flex flex-col gap-2">
             <button
-              v-for="player in participants"
+              v-for="player in (cat.selfVote ? participants : participants.filter((p) => p.user_id !== auth.user?.id))"
               :key="player.user_id"
               type="button"
               :disabled="!canVote"
               class="flex items-center gap-2.5 rounded-xl px-3 py-[9px] text-left disabled:opacity-60"
-              :class="marks.top_scorer.includes(player.user_id) ? 'border-2 border-brand bg-brandSoft' : 'border border-border'"
-              @click="toggleMark('top_scorer', player.user_id)"
+              :class="marks[cat.key].includes(player.user_id) ? 'border-2 ' + (cat.warnColor ? 'border-warn bg-warnBg' : 'border-brand bg-brandSoft') : 'border border-border'"
+              @click="toggleMark(cat.key, player.user_id)"
             >
               <Avatar :name="player.name" :color="player.avatar_color" size="sm" />
-              <span class="flex-1 text-sm" :class="marks.top_scorer.includes(player.user_id) ? 'font-semibold' : 'font-medium'">
+              <span class="flex-1 text-sm" :class="marks[cat.key].includes(player.user_id) ? 'font-semibold' : 'font-medium'">
                 {{ player.user_id === auth.user?.id ? 'Você' : player.name }}
               </span>
               <span
-                v-if="marks.top_scorer.includes(player.user_id)"
-                class="flex h-5 w-5 items-center justify-center rounded-full bg-brand"
+                v-if="marks[cat.key].includes(player.user_id)"
+                class="flex h-5 w-5 items-center justify-center rounded-full"
+                :class="cat.warnColor ? 'bg-warn' : 'bg-brand'"
               >
                 <NavIcon name="check" :size="11" :stroke-width="3" class="text-white" />
               </span>
               <span v-else class="h-5 w-5 rounded-full border-2 border-border" />
             </button>
           </div>
-        </Card>
-
-        <Card class="p-4">
-          <div class="mb-[11px] flex items-center justify-between">
-            <span class="inline-flex items-center gap-[7px] text-[13px] font-bold">
-              <span class="inline-flex h-7 w-7 items-center justify-center rounded-[9px] bg-warnBg text-[15px]">🥴</span>
-              Vote no perna de pau
-            </span>
-            <span class="text-[11.5px] font-medium text-ink3">{{ marks.worst_player.length }}/2 votos · sem voto em si mesmo</span>
-          </div>
-          <div class="flex flex-col gap-2">
-            <button
-              v-for="player in participants.filter((p) => p.user_id !== auth.user?.id)"
-              :key="player.user_id"
-              type="button"
-              :disabled="!canVote"
-              class="flex items-center gap-2.5 rounded-xl px-3 py-[9px] text-left disabled:opacity-60"
-              :class="marks.worst_player.includes(player.user_id) ? 'border-2 border-warn bg-warnBg' : 'border border-border'"
-              @click="toggleMark('worst_player', player.user_id)"
-            >
-              <Avatar :name="player.name" :color="player.avatar_color" size="sm" />
-              <span class="flex-1 text-sm" :class="marks.worst_player.includes(player.user_id) ? 'font-semibold' : 'font-medium'">
-                {{ player.name }}
-              </span>
-              <span
-                v-if="marks.worst_player.includes(player.user_id)"
-                class="flex h-5 w-5 items-center justify-center rounded-full bg-warn"
-              >
-                <NavIcon name="check" :size="11" :stroke-width="3" class="text-white" />
-              </span>
-              <span v-else class="h-5 w-5 rounded-full border-2 border-border" />
-            </button>
-          </div>
-          <p v-if="!detail.is_participant" class="mt-3 text-xs text-ink3">
+          <p v-if="!detail.is_participant && cat.key === 'worst_player'" class="mt-3 text-xs text-ink3">
             Somente quem participou da partida pode votar.
           </p>
         </Card>

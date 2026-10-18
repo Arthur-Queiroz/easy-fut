@@ -135,8 +135,10 @@ export interface ChargeBatch {
   created_at: string
 }
 
+export type VoteCategory = 'top_scorer' | 'worst_player' | 'best_goal'
+
 export interface VoteResult {
-  category: 'top_scorer' | 'worst_player'
+  category: VoteCategory
   vote_count: number
   winners: Winner[]
 }

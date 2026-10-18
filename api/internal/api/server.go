@@ -91,6 +91,11 @@ func (s *Server) Handler() http.Handler {
 			r.Use(s.requireAuth, s.requireActive, s.requireAdmin)
 			r.Get("/admin/dashboard", s.handleDashboard)
 
+			// Dashboard de votação (FUT-005)
+			r.Get("/admin/matches/{id}/votes", s.handleMatchVotes)
+			r.Get("/admin/users/{id}/votes", s.handleUserVotes)
+			r.Get("/admin/stats/votes", s.handleVotesSummary)
+
 			// Recorrências (FUT-004)
 			r.Get("/admin/recurring", s.handleListRecurring)
 			r.Post("/admin/recurring", s.handleCreateRecurring)

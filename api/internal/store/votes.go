@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -83,7 +84,147 @@ func (s *Store) MyVotes(ctx context.Context, matchID, voterID string) (map[strin
 	return votes, rows.Err()
 }
 
-// VoteResults apura as duas categorias; empate devolve mais de um vencedor.
+// --- FUT-005: dashboard de votação ---
+
+// VoteTally: linha agregada por candidato numa categoria da partida.
+type VoteTally struct {
+	Category    string `json:"category"`
+	CandidateID string `json:"candidate_id"`
+	Name        string `json:"name"`
+	AvatarColor string `json:"avatar_color"`
+	Votes       int    `json:"votes"`
+}
+
+// FlatVote: voto individual (auditável).
+type FlatVote struct {
+	VoterID       string    `json:"voter_id"`
+	VoterName     string    `json:"voter_name"`
+	Category      string    `json:"category"`
+	CandidateID   string    `json:"candidate_id"`
+	CandidateName string    `json:"candidate_name"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+// MatchVoteSummary: participação de votação por partida (comparativo).
+type MatchVoteSummary struct {
+	MatchID   string `json:"match_id"`
+	MatchDate string `json:"match_date"` // DD/MM
+	Status    string `json:"status"`
+	Voters    int    `json:"voters"`
+	Votes     int    `json:"votes"`
+}
+
+func (s *Store) VoteTallyByMatch(ctx context.Context, matchID string) ([]VoteTally, error) {
+	rows, err := s.pool.Query(ctx, `
+		select cats.category, c.candidate_id, u.name, u.avatar_color, c.votes
+		from (
+			select 'top_scorer' as category, 1 as ord
+			union all select 'worst_player', 2
+			union all select 'best_goal', 3
+		) cats
+		cross join lateral (
+			select v.candidate_id, count(*) as votes
+			from votes v where v.match_id = $1 and v.category = cats.category
+			group by v.candidate_id
+		) c
+		join users u on u.id = c.candidate_id
+		order by cats.ord, c.votes desc, u.name`, matchID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []VoteTally
+	for rows.Next() {
+		var t VoteTally
+		if err := rows.Scan(&t.Category, &t.CandidateID, &t.Name, &t.AvatarColor, &t.Votes); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// MatchesVotesFlat lista votos individuais; userOpcional filtra por votante.
+func (s *Store) MatchesVotesFlat(ctx context.Context, matchID, userID string) ([]FlatVote, error) {
+	q := `
+		select v.voter_id, vu.name, v.category, v.candidate_id, cu.name, v.created_at
+		from votes v
+		join users vu on vu.id = v.voter_id
+		join users cu on cu.id = v.candidate_id
+		where v.match_id = $1`
+	args := []any{matchID}
+	if userID != "" {
+		q += ` and v.voter_id = $2`
+		args = append(args, userID)
+	}
+	q += ` order by v.created_at`
+	rows, err := s.pool.Query(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []FlatVote
+	for rows.Next() {
+		var f FlatVote
+		if err := rows.Scan(&f.VoterID, &f.VoterName, &f.Category, &f.CandidateID, &f.CandidateName, &f.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, f)
+	}
+	return out, rows.Err()
+}
+
+// UserVoteHistory — tudo que o usuário votou em qualquer partida.
+func (s *Store) UserVoteHistory(ctx context.Context, userID string) ([]FlatVote, error) {
+	rows, err := s.pool.Query(ctx, `
+		select v.voter_id, vu.name, v.category, v.candidate_id, cu.name, v.created_at
+		from votes v
+		join users vu on vu.id = v.voter_id
+		join users cu on cu.id = v.candidate_id
+		where v.voter_id = $1
+		order by v.created_at desc`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []FlatVote
+	for rows.Next() {
+		var f FlatVote
+		if err := rows.Scan(&f.VoterID, &f.VoterName, &f.Category, &f.CandidateID, &f.CandidateName, &f.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, f)
+	}
+	return out, rows.Err()
+}
+
+// MatchesVoteSummary — join para o comparativo entre partidas.
+func (s *Store) MatchesVoteSummary(ctx context.Context, fromISO, toISO string) ([]MatchVoteSummary, error) {
+	rows, err := s.pool.Query(ctx, `
+		select m.id, to_char(m.match_date, 'DD/MM'), m.status,
+			coalesce(t.voters, 0), coalesce(t.votes, 0)
+		from matches m
+		left join lateral (
+			select count(distinct v.voter_id) as voters, count(*) as votes
+			from votes v where v.match_id = m.id
+		) t on true
+		where ($1 = '' or to_char(m.match_date, 'YYYY-MM-DD') >= $1)
+		  and ($2 = '' or to_char(m.match_date, 'YYYY-MM-DD') <= $2)
+		order by m.match_date desc`, fromISO, toISO)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []MatchVoteSummary
+	for rows.Next() {
+		var s2 MatchVoteSummary
+		if err := rows.Scan(&s2.MatchID, &s2.MatchDate, &s2.Status, &s2.Voters, &s2.Votes); err != nil {
+			return nil, err
+		}
+		out = append(out, s2)
+	}
+	return out, rows.Err()
+}
 func (s *Store) VoteResults(ctx context.Context, matchID string) ([]VoteResult, error) {
 	results := []VoteResult{
 		{Category: "top_scorer", Winners: []Winner{}},

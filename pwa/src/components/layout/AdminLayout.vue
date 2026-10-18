@@ -17,6 +17,7 @@ const items = [
   { label: 'Mensalidades', to: '/admin/mensalidades', icon: 'pix' },
   { label: 'Convites', to: '/admin/convites', icon: 'chat' },
   { label: 'Recorrências', to: '/admin/recorrencias', icon: 'grid' },
+  { label: 'Votos', to: '/admin/votos', icon: 'trophy' },
   { label: 'Avisos', to: '/admin/avisos', icon: 'bell' },
   { label: 'Configurações', to: '/admin/configuracoes', icon: 'gear' },
 ]
