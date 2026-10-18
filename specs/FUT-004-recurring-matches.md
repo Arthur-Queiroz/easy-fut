@@ -1,6 +1,6 @@
 # FUT-004 — Partidas recorrentes (criação automática)
 
-**Status:** draft (a implementar)
+**Status:** implemented (PR fut/004-recurring-matches)
 **Tipo:** vertical (API + jobs + PWA admin)
 **Origem:** as partidas são sempre no mesmo lugar/hora (evidência: últimas 6 aos domingos, 11:00–12:30, Arena Futiba 1) mas hoje precisam ser criadas manualmente — risco de esquecer. Vamos adicionar criação automática via template recorrente, **sem remover** o fluxo manual (os dois coexistem).
 

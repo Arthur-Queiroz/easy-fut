@@ -73,6 +73,20 @@ func votingTestMatch(t *testing.T, s *Store, status, matchDate, endTime string) 
 	return id
 }
 
+func votingTestUser(t *testing.T, s *Store, status string) string {
+	t.Helper()
+	ctx := context.Background()
+	var id string
+	err := s.pool.QueryRow(ctx, `
+		insert into users (name, email, password_hash, role, status)
+		values ('Usuario test', $1, 'test', 'admin', $2) returning id`,
+		uuid.NewString()+"@example.invalid", status).Scan(&id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
 func matchStatus(t *testing.T, s *Store, id string) (string, *time.Time) {
 	t.Helper()
 	var status string
