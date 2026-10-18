@@ -44,6 +44,7 @@ func (r *Runner) Start() {
 	mustAdd("*/10 * * * *", r.openUnopenedVoting)     // FUT-001
 	mustAdd("15 0 * * *", r.markOverdueAndInactivate) // diário, 00h15
 	mustAdd("*/5 * * * *", r.sendDueNotifications)
+	mustAdd("15 8 * * *", r.materializeRecurring) // diário, 05:15 SP (FUT-004)
 
 	r.cron.Start()
 }
@@ -107,6 +108,25 @@ func (r *Runner) openUnopenedVoting() {
 				fmt.Sprintf("Votação aberta automaticamente — partida do dia %s",
 					m.MatchDate[8:10]+"/"+m.MatchDate[5:7]))
 		}
+	}
+}
+
+// materializeRecurring (FUT-004): cria as 4 próximas ocorrências de cada
+// template ativo. Roda às 05:15 horário do processo (TZ=America/Sao_Paulo
+// em produção). Na primeira execução após migrate, o seed cria o template
+// do grupo se ainda não existir.
+func (r *Runner) materializeRecurring() {
+	ctx := context.Background()
+	if err := r.store.RecurringSeed(ctx); err != nil {
+		log.Printf("seed recorrente: %v", err)
+	}
+	n, err := r.store.MaterializeRecurringMatches(ctx, 4)
+	if err != nil {
+		log.Printf("job materializar recorrentes: %v", err)
+		return
+	}
+	if n > 0 {
+		log.Printf("materializadas %d partidas recorrentes", n)
 	}
 }
 

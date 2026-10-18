@@ -91,6 +91,13 @@ func (s *Server) Handler() http.Handler {
 			r.Use(s.requireAuth, s.requireActive, s.requireAdmin)
 			r.Get("/admin/dashboard", s.handleDashboard)
 
+			// Recorrências (FUT-004)
+			r.Get("/admin/recurring", s.handleListRecurring)
+			r.Post("/admin/recurring", s.handleCreateRecurring)
+			r.Patch("/admin/recurring/{id}", s.handleUpdateRecurring)
+			r.Patch("/admin/recurring/{id}/activate", s.handleActivateRecurring)
+			r.Delete("/admin/recurring/{id}", s.handleDeleteRecurring)
+
 			r.Get("/admin/users", s.handleListUsers)
 			r.Patch("/admin/users/{id}", s.handleUpdateUser)
 
