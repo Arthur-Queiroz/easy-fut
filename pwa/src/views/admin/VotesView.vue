@@ -72,7 +72,12 @@ async function load() {
     matches.value = m.data.matches ?? []
     summaries.value = (s.data as { matches?: MatchVoteSummary[] }).matches ?? []
     users.value = (u.data as { users?: VoteUser[] }).users ?? []
-    if (matches.value.length && !selectedMatchId.value) await selectMatch(matches.value[0].id)
+    // FUT-005 fix: auto-selecionar partida com votos (senão a mais recente com votação encerrada)
+    if (matches.value.length && !selectedMatchId.value) {
+      const withVotes = summaries.value.find((s) => s.votes > 0)
+      const fallback = matches.value.find((m) => m.status === 'finished') ?? matches.value[0]
+      await selectMatch(withVotes?.match_id ?? fallback.id)
+    }
   } catch (e) {
     error.value = errorMessage(e)
   }
@@ -131,7 +136,8 @@ const maxVotes = (rows: VoteTally[]): number => Math.max(1, ...rows.map((r) => r
       <Card class="p-4">
         <SectionLabel>Participação por partida</SectionLabel>
         <div v-if="summaries.length" class="mt-2 flex flex-col gap-[6px]">
-          <div v-for="s in summaries.slice(0, 8)" :key="s.match_id" class="flex items-center gap-2 text-[12.5px]">
+          <!-- Só partidas passadas/atuais com votação relevante (FUT-005 fix: sem futuras zeradas) -->
+          <div v-for="s in summaries.filter((x) => x.votes > 0 || x.status === 'finished').slice(0, 8)" :key="s.match_id" class="flex items-center gap-2 text-[12.5px]">
             <button
               type="button"
               class="w-[70px] shrink-0 text-left font-semibold hover:underline"
@@ -140,7 +146,7 @@ const maxVotes = (rows: VoteTally[]): number => Math.max(1, ...rows.map((r) => r
             <div class="h-[16px] flex-1 overflow-hidden rounded-md bg-surface">
               <div class="h-full rounded-md bg-brand/70" :style="{ width: Math.min(100, s.voters * 8) + '%' }" />
             </div>
-            <span class="shrink-0 text-ink3">{{ s.voters }} votantes · {{ s.votes }} votos</span>
+            <span class="shrink-0 text-ink3">{{ s.voters }} {{ s.voters === 1 ? 'votante' : 'votantes' }} · {{ s.votes }} {{ s.votes === 1 ? 'voto' : 'votos' }}</span>
           </div>
         </div>
         <p v-else class="mt-2 text-sm text-ink3">Sem partidas com votos.</p>
@@ -183,8 +189,8 @@ const maxVotes = (rows: VoteTally[]): number => Math.max(1, ...rows.map((r) => r
         </div>
         <p v-else class="text-sm text-ink3">Selecione uma partida.</p>
 
-        <!-- Votos individuais -->
-        <details class="mt-3">
+        <!-- Votos individuais (só com partida selecionada; FUT-005 fix) -->
+        <details v-if="selectedMatchId" class="mt-3">
           <summary class="cursor-pointer text-[12.5px] font-semibold text-brand">Ver votos individuais ({{ flat.length }})</summary>
           <div class="mt-2 flex flex-col gap-[4px]">
             <div v-for="(v, i) in flat" :key="i" class="flex items-center gap-2 rounded-lg bg-surface px-2.5 py-[6px] text-[12.5px]">
