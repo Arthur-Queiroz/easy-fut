@@ -83,8 +83,9 @@ func (s *Store) MatchByID(ctx context.Context, id string) (Match, error) {
 func (s *Store) NextMatch(ctx context.Context) (Match, error) {
 	return scanMatch(s.pool.QueryRow(ctx, `
 		select `+matchColumns+` from matches m
-		where m.status in ('open', 'closed', 'teams_drawn') and m.match_date >= current_date
-		order by m.match_date, m.start_time limit 1`))
+		where (m.status = 'voting' or
+		       (m.status in ('open', 'closed', 'teams_drawn') and m.match_date >= current_date))
+		order by (m.status = 'voting') desc, m.match_date, m.start_time limit 1`))
 }
 
 // ListMatches retorna o histórico (mais recentes primeiro). month opcional em YYYY-MM.
