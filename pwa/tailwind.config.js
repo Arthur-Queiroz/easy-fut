@@ -24,6 +24,7 @@ export default {
         info: 'var(--info)',
         infoBg: 'var(--info-bg)',
         lime: 'var(--lime)',
+        chartMuted: 'var(--chart-muted)',
         pitch: { 1: '#0c100f', 2: '#13251f', 3: '#0f3325', 4: '#1a6644' },
       },
       fontFamily: {
