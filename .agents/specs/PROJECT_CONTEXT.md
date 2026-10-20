@@ -24,7 +24,8 @@ ver o motivo e pagar o que devem.
 2. **Partida:** admin cria; jogadores ativos confirmam `going`/`not_going`
    até o prazo; o sistema fecha as confirmações; admin sorteia ou monta os
    times; admin encerra a partida e abre a votação.
-3. **Votação:** artilheiro (`top_scorer`) e perna de pau (`worst_player`).
+3. **Votação:** artilheiro (`top_scorer`), perna de pau (`worst_player`) e
+   melhor gol (`best_goal`). Abre sozinha depois do fim da partida.
 4. **Cobranças:** mensalidade mensal rateada entre ativos ou cobrança avulsa
    de partida rateada entre participantes escolhidos. Pagamento por Pix
    dinâmico do Mercado Pago com webhook, ou baixa manual pelo admin.
