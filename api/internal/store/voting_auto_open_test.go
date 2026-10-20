@@ -2,52 +2,15 @@ package store
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// votingTestStore segue o padrão de push_test.go: schema próprio por teste.
 func votingTestStore(t *testing.T) *Store {
 	t.Helper()
-	databaseURL := os.Getenv("TEST_DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("TEST_DATABASE_URL not set")
-	}
-	ctx := context.Background()
-	root, err := pgxpool.New(ctx, databaseURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	schema := "voting_test_" + uuid.NewString()[:8]
-	if _, err = root.Exec(ctx, `create schema `+schema); err != nil {
-		root.Close()
-		t.Fatal(err)
-	}
-	cfg, err := pgxpool.ParseConfig(databaseURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cfg.ConnConfig.RuntimeParams["search_path"] = schema + ",public"
-	pool, err := pgxpool.NewWithConfig(ctx, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	st := &Store{pool: pool}
-	t.Cleanup(func() {
-		pool.Close()
-		if _, err := root.Exec(ctx, `drop schema `+schema+` cascade`); err != nil {
-			t.Error(err)
-		}
-		root.Close()
-	})
-	if err := st.Migrate(ctx); err != nil {
-		t.Fatal(err)
-	}
-	return st
+	return newTestStore(t, "voting_test")
 }
 
 // votingTestMatch cria uma partida na data/hora informados (na TZ de SP, como

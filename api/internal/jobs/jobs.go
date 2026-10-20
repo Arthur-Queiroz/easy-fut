@@ -10,6 +10,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 
+	"futdarapaziada/api/internal/matches"
 	"futdarapaziada/api/internal/notify"
 	"futdarapaziada/api/internal/push"
 	"futdarapaziada/api/internal/store"
@@ -76,17 +77,9 @@ func (r *Runner) closeExpiredVoting() {
 			continue
 		}
 		for _, res := range results {
-			// FUT-005: label por categoria (inclui "melhor gol")
-			label := "artilheiro"
-			switch res.Category {
-			case "worst_player":
-				label = "perna de pau"
-			case "best_goal":
-				label = "melhor gol"
-			}
 			for _, winner := range res.Winners {
 				r.store.LogActivity(ctx, nil, "vote_result",
-					fmt.Sprintf("%s foi eleito %s da partida", winner.Name, label))
+					matches.WinnerAnnouncement(matches.Category(res.Category), winner.Name))
 			}
 		}
 	}

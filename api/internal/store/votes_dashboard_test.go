@@ -2,10 +2,13 @@ package store
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+
+	"futdarapaziada/api/internal/matches"
 )
 
 // setupVoteData cria partida em votação, admin votante e 2 candidatos.
@@ -37,7 +40,7 @@ func TestBestGoalCategoryAccepted(t *testing.T) {
 		}
 	}
 	// 2 votos em jogadores distintos: ok. Terceiro em outro jogador viola apenas regra do handler, não do store.
-	if err := s.CastVote(ctx, matchID, voterID, "best_goal", candA); err != ErrDuplicateVote {
+	if err := s.CastVote(ctx, matchID, voterID, "best_goal", candA); !errors.Is(err, matches.ErrDuplicateVote) {
 		t.Fatalf("duplicado deveria dar ErrDuplicateVote, veio %v", err)
 	}
 }

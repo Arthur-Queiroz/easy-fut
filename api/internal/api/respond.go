@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"futdarapaziada/api/internal/matches"
 	"futdarapaziada/api/internal/store"
 )
 
@@ -34,7 +35,8 @@ func writeErrorCode(w http.ResponseWriter, status int, message, code string) {
 	writeJSON(w, status, apiError{Error: message, Code: code})
 }
 
-// writeStoreError converte erros comuns do store em respostas HTTP.
+// writeStoreError converte erros do store e das regras de domínio em
+// respostas HTTP. Um erro de domínio novo precisa entrar aqui.
 func writeStoreError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, store.ErrNotFound), isMalformedID(err):
@@ -43,7 +45,11 @@ func writeStoreError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusConflict, err.Error())
 	case errors.Is(err, store.ErrBatchExists):
 		writeError(w, http.StatusConflict, err.Error())
-	case errors.Is(err, store.ErrDuplicateVote):
+	case errors.Is(err, matches.ErrInvalidCategory), errors.Is(err, matches.ErrSelfWorstVote):
+		writeError(w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, matches.ErrNotParticipant):
+		writeError(w, http.StatusForbidden, err.Error())
+	case errors.Is(err, matches.ErrVotingClosed), errors.Is(err, matches.ErrDuplicateVote), errors.Is(err, matches.ErrVoteLimit):
 		writeError(w, http.StatusConflict, err.Error())
 	default:
 		log.Printf("erro interno: %v", err)

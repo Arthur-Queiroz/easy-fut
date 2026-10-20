@@ -1,47 +1,49 @@
-# AGENTS.md — fut-app-api
+# Easy Fut API
 
-API do sistema **Fut da Rapaziada** — gestão de partidas, mensalidades e votação.
+Siga também o `AGENTS.md` da raiz: contexto, regras de negócio e segurança
+valem para o monorepo inteiro. Específico da API:
+
+1. `.agents/specs/ARCHITECTURE.md` (nesta pasta).
+2. `PUSH_NOTIFICATIONS.md` ao mexer em push, jobs ou na fila de envios.
+3. `OPERATIONS.md` para backup, restauração e monitoramento (ver
+   `../.agents/PENDENCIAS.md` antes de usar os scripts).
 
 ## Stack
 
-Go 1.26+ · chi router · PostgreSQL · sqlc/sqlx · JWT httpOnly · robfig/cron
-
-## Estrutura
-
-```
-cmd/api/            binário do servidor
-internal/
-  api/              rotas, middlewares e handlers HTTP
-  auth/             hash de senha, JWT de sessão, rate limit de login
-  busdays/          prazos em dias úteis (5º dia útil, lembrete D-1)
-  config/           configuração por variáveis de ambiente
-  draw/             sorteio dos times
-  jobs/             cron: fechar confirmações/votação, vencer cobranças, lembretes
-  notify/           envio de WhatsApp (stub até definir provedor)
-  store/            PostgreSQL: migrations embutidas, queries e modelos
-```
+Go 1.26+ · chi v5 · PostgreSQL via `pgx/v5` (SQL escrito à mão) · JWT em cookie
+httpOnly · `robfig/cron` · `webpush-go` · Mercado Pago SDK. Módulo Go:
+`futdarapaziada/api`.
 
 ## Comandos
 
 ```bash
-go test ./...            # testes (dias úteis, balanceamento do sorteio)
-go vet ./...             # lint estático
-go build ./cmd/api       # compila
+gofmt -l .                # precisa sair vazio (o CI falha caso contrário)
+go vet ./...
+go test ./...             # testes de banco são pulados sem TEST_DATABASE_URL
+bash scripts/test-db.sh   # todos os testes com um PostgreSQL descartável (Docker)
+bash scripts/test-db.sh ./internal/matches -run Ballot   # aceita args do go test
+staticcheck ./...         # roda no CI; local se instalado
+go build ./cmd/api
 ```
 
 ## Executar localmente
 
+A API lê variáveis do processo; `go run` não carrega `.env`.
+
 ```bash
-DATABASE_URL="postgres://futapp:futapp@localhost:5432/futapp?sslmode=disable" \
-JWT_SECRET="dev-secret" \
-SEED_ADMIN_EMAIL="admin@local" SEED_ADMIN_PASSWORD="admin12345" \
-go run ./cmd/api
+docker network create fut-app     # uma vez
+docker compose up -d postgres
+set -a; source .env; set +a       # a partir de .env.example
+go run ./cmd/api                  # :8080, aplica migrations e cria o admin inicial
 ```
 
-## Frontend
+Ao apontar para o banco da VPS (túnel SSH), use `DISABLE_JOBS=true`.
 
-O frontend (Vue 3 + Vite) vive em `../pwa`, no mesmo monorepo `Arthur-Queiroz/easy-fut`. API e PWA são deployadas como serviços separados (`api` e `web`).
+## Verificação
 
-## Documentação completa
+Regra de negócio nova ou alterada segue o ciclo de TDD de
+`.agents/specs/ARCHITECTURE.md`: teste do domínio primeiro.
 
-Ver `../README.md` e `../AGENTS.md` na raiz do monorepo.
+Após alterar a API, rode `gofmt -l .`, `go vet ./...` e
+`bash scripts/test-db.sh` (ou `go test ./...` sem Docker, sabendo que os
+testes de banco serão pulados).

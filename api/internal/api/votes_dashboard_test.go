@@ -25,15 +25,3 @@ func TestVotesDashboardRoutesRequireAuth(t *testing.T) {
 		}
 	}
 }
-
-func TestVoteCategoriesValidation(t *testing.T) {
-	if !validVoteCategory("best_goal") || !validVoteCategory("top_scorer") || !validVoteCategory("worst_player") {
-		t.Fatal("categorias válidas rejeitadas")
-	}
-	if validVoteCategory("mvp") || validVoteCategory("") {
-		t.Fatal("categoria inválida aceita")
-	}
-	if voteCategoryLabel("best_goal") != "melhor gol" {
-		t.Fatal("label de best_goal errado")
-	}
-}

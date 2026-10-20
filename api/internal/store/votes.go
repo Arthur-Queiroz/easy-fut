@@ -6,14 +6,13 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"futdarapaziada/api/internal/matches"
 )
 
-// ErrDuplicateVote indica voto repetido no mesmo jogador dentro da categoria.
-var ErrDuplicateVote = errors.New("você já votou neste jogador nesta categoria")
-
-// CastVote grava o voto do usuário na categoria. Cada participante pode votar
-// em até 2 jogadores distintos por categoria — o limite é validado no handler
-// (handleVote) e a duplicidade é garantida pela constraint unique do banco.
+// CastVote grava o voto do usuário na categoria. As regras do voto ficam em
+// matches.Ballot; aqui a constraint unique só garante que o mesmo jogador não
+// seja votado duas vezes na categoria.
 func (s *Store) CastVote(ctx context.Context, matchID, voterID, category, candidateID string) error {
 	_, err := s.pool.Exec(ctx, `
 		insert into votes (match_id, voter_id, category, candidate_id)
@@ -21,7 +20,7 @@ func (s *Store) CastVote(ctx context.Context, matchID, voterID, category, candid
 		matchID, voterID, category, candidateID)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
-		return ErrDuplicateVote
+		return matches.ErrDuplicateVote
 	}
 	return err
 }
@@ -227,8 +226,8 @@ func (s *Store) MatchesVoteSummary(ctx context.Context, fromISO, toISO string) (
 }
 func (s *Store) VoteResults(ctx context.Context, matchID string) ([]VoteResult, error) {
 	results := []VoteResult{
-		{Category: "top_scorer", Winners: []Winner{}},
-		{Category: "worst_player", Winners: []Winner{}},
+		{Category: string(matches.TopScorer), Winners: []Winner{}},
+		{Category: string(matches.WorstPlayer), Winners: []Winner{}},
 	}
 	for i := range results {
 		rows, err := s.pool.Query(ctx, `
