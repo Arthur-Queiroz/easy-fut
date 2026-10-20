@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
 	"time"
 
 	"github.com/google/uuid"
 
 	"futdarapaziada/api/internal/draw"
+	"futdarapaziada/api/internal/matches"
 	"futdarapaziada/api/internal/store"
 )
 
@@ -102,9 +102,8 @@ func (s *Server) handleGetMatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Resultado só é exposto depois do encerramento, para não influenciar votos.
 	var results []store.VoteResult
-	if match.Status == "finished" {
+	if matches.ResultsVisible(match.Status) {
 		if results, err = s.store.VoteResults(r.Context(), match.ID); err != nil {
 			writeStoreError(w, err)
 			return
@@ -176,8 +175,9 @@ func (s *Server) handleVote(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &body) {
 		return
 	}
-	if !validVoteCategory(body.Category) {
-		writeError(w, http.StatusBadRequest, "categoria inválida")
+	category, err := matches.ParseCategory(body.Category)
+	if err != nil {
+		writeStoreError(w, err)
 		return
 	}
 	if _, err := uuid.Parse(body.CandidateID); err != nil {
@@ -190,46 +190,37 @@ func (s *Server) handleVote(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
-	if match.Status != "voting" {
-		writeError(w, http.StatusConflict, "a votação desta partida não está aberta")
-		return
-	}
-	// Só participa da votação (votando ou recebendo voto) quem jogou.
-	voterOK, err := s.store.IsParticipant(r.Context(), matchID, user.ID)
-	if err != nil {
+	if err := matches.CheckVotingOpen(match.Status); err != nil {
 		writeStoreError(w, err)
-		return
-	}
-	candidateOK, err := s.store.IsParticipant(r.Context(), matchID, body.CandidateID)
-	if err != nil {
-		writeStoreError(w, err)
-		return
-	}
-	if !voterOK || !candidateOK {
-		writeError(w, http.StatusForbidden, "somente quem participou da partida pode votar e receber votos")
-		return
-	}
-	if body.Category == "worst_player" && body.CandidateID == user.ID {
-		writeError(w, http.StatusBadRequest, "não vale votar em si mesmo nessa categoria")
 		return
 	}
 
-	// Limite de 2 votos por categoria, em jogadores distintos.
+	ballot := matches.Ballot{
+		MatchStatus: match.Status,
+		VoterID:     user.ID,
+		CandidateID: body.CandidateID,
+		Category:    category,
+	}
+	if ballot.VoterPlayed, err = s.store.IsParticipant(r.Context(), matchID, user.ID); err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	if ballot.CandidatePlayed, err = s.store.IsParticipant(r.Context(), matchID, body.CandidateID); err != nil {
+		writeStoreError(w, err)
+		return
+	}
 	myVotes, err := s.store.MyVotes(r.Context(), matchID, user.ID)
 	if err != nil {
 		writeStoreError(w, err)
 		return
 	}
-	if slices.Contains(myVotes[body.Category], body.CandidateID) {
-		writeError(w, http.StatusConflict, store.ErrDuplicateVote.Error())
-		return
-	}
-	if len(myVotes[body.Category]) >= 2 {
-		writeError(w, http.StatusConflict, "você já usou seus 2 votos nesta categoria")
+	ballot.PreviousVotes = myVotes[string(category)]
+	if err := ballot.Validate(); err != nil {
+		writeStoreError(w, err)
 		return
 	}
 
-	if err := s.store.CastVote(r.Context(), matchID, user.ID, body.Category, body.CandidateID); err != nil {
+	if err := s.store.CastVote(r.Context(), matchID, user.ID, string(category), body.CandidateID); err != nil {
 		writeStoreError(w, err)
 		return
 	}
@@ -243,8 +234,8 @@ func (s *Server) handleRemoveVote(w http.ResponseWriter, r *http.Request) {
 	candidateID := r.PathValue("candidateId")
 	user := currentUser(r)
 
-	if !validVoteCategory(category) {
-		writeError(w, http.StatusBadRequest, "categoria inválida")
+	if _, err := matches.ParseCategory(category); err != nil {
+		writeStoreError(w, err)
 		return
 	}
 	if _, err := uuid.Parse(candidateID); err != nil {
@@ -257,8 +248,8 @@ func (s *Server) handleRemoveVote(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
-	if match.Status != "voting" {
-		writeError(w, http.StatusConflict, "a votação desta partida não está aberta")
+	if err := matches.CheckVotingOpen(match.Status); err != nil {
+		writeStoreError(w, err)
 		return
 	}
 
@@ -469,16 +460,8 @@ func (s *Server) logVoteWinners(r *http.Request, matchID string) {
 	}
 	for _, res := range results {
 		for _, winner := range res.Winners {
-			// FUT-005: label por categoria (inclui "melhor gol")
-			label := "artilheiro"
-			switch res.Category {
-			case "worst_player":
-				label = "perna de pau"
-			case "best_goal":
-				label = "melhor gol"
-			}
 			s.store.LogActivity(r.Context(), nil, "vote_result",
-				fmt.Sprintf("%s foi eleito %s da partida", winner.Name, label))
+				matches.WinnerAnnouncement(matches.Category(res.Category), winner.Name))
 		}
 	}
 }
