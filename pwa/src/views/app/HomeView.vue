@@ -7,6 +7,7 @@ import {
   countdown, dayOfMonth, formatCents, formatDateLong, formatHour,
   formatMonth, monthShort, timeAgo, weekdayShort, todayISO,
 } from '../../lib/format'
+import { payableCents } from '../../lib/charges'
 import MobileShell from '../../components/layout/MobileShell.vue'
 import NavIcon from '../../components/layout/NavIcon.vue'
 import Avatar from '../../components/ui/Avatar.vue'
@@ -188,7 +189,7 @@ const activityIcon = (kind: string) => {
           </div>
           <div class="mt-3 flex items-center justify-between lg:mt-4 lg:flex-col lg:items-start lg:gap-4">
             <div>
-              <div class="font-condensed text-[30px] font-bold leading-none lg:text-[38px]">{{ formatCents(currentCharge.amount_cents) }}</div>
+              <div class="font-condensed text-[30px] font-bold leading-none lg:text-[38px]">{{ formatCents(payableCents(currentCharge)) }}</div>
               <div class="mt-1 text-[12.5px] text-ink2">Vence {{ formatDateLong(currentCharge.due_date) }}</div>
             </div>
             <router-link

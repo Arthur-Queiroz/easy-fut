@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"futdarapaziada/api/internal/billing"
 	"futdarapaziada/api/internal/matches"
 	"futdarapaziada/api/internal/store"
 )
@@ -45,6 +46,8 @@ func writeStoreError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusConflict, err.Error())
 	case errors.Is(err, store.ErrBatchExists):
 		writeError(w, http.StatusConflict, err.Error())
+	case errors.Is(err, billing.ErrInvalidFeeRate):
+		writeError(w, http.StatusBadRequest, err.Error())
 	case errors.Is(err, matches.ErrInvalidCategory), errors.Is(err, matches.ErrSelfWorstVote):
 		writeError(w, http.StatusBadRequest, err.Error())
 	case errors.Is(err, matches.ErrNotParticipant):

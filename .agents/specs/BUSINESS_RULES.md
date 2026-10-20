@@ -93,6 +93,21 @@ O rateio é uma fotografia: total, quantidade e valor individual ficam gravados
 e não mudam se o número de ativos mudar depois. A divisão é inteira em
 centavos. Vencimento: 5 dias úteis após a geração (seg–sex, sem feriados).
 
+Taxa do Pix repassada (`api/internal/billing`):
+- **Na geração:** cada cobrança ganha `pix_fee_cents`, calculado sobre o
+  valor individual com a taxa de `pix_fee_bps` (padrão 99 = 0,99%, a
+  tarifa do Mercado Pago na conta).
+- **Valor cobrado:** o jogador vê e paga `pix_total_cents` (rateio + taxa),
+  e é esse total que vai no Pix.
+- **Cálculo:** o total é o menor valor que, descontada a tarifa (arredondada
+  para cima no centavo), deixa o rateio inteiro para o grupo. Exemplo:
+  R$ 60,00 → R$ 60,60.
+- **Congelamento:** a taxa fica gravada no lote (`pix_fee_bps`,
+  `pix_fee_cents`) e na cobrança; mudar a configuração só afeta lotes
+  novos. Cobranças anteriores ao repasse têm taxa 0.
+- **Baixa manual** (dinheiro ou Pix direto) registra só o rateio.
+- Lembretes de WhatsApp (`{{valor}}`) informam o total no Pix.
+
 Estados (`charges.status`):
 
 - `pending` → `overdue`: cron diário às 00h15, que também agenda o lembrete
@@ -132,7 +147,9 @@ Tabela `settings` (chave/valor). Editadas em `/admin/configuracoes`:
 - `voting_close_days` (padrão 2), `overdue_inactivate_days` (padrão 0),
   `invite_valid_days` (padrão 7);
 - `reminder_template`: mensagem do lembrete de cobrança que o admin envia
-  manualmente por WhatsApp.
+  manualmente por WhatsApp;
+- `pix_fee_bps`: taxa do Pix repassada, editada em porcentagem (0,99) e
+  validada de 0 a 19,99%; 0 desliga o repasse.
 
 Fora da tela: `voting_open_delay_min` (padrão 0, minutos após o fim para a
 abertura automática da votação), `overdue_template` (lembrete automático de

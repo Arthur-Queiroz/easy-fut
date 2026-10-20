@@ -94,7 +94,9 @@ type ChargeBatch struct {
 	TotalAmountCents      int64     `json:"total_amount_cents"`
 	UserCount             int       `json:"user_count"`
 	IndividualAmountCents int64     `json:"individual_amount_cents"`
-	DueDate               string    `json:"due_date"` // YYYY-MM-DD
+	DueDate               string    `json:"due_date"`      // YYYY-MM-DD
+	PixFeeBasisPoints     int64     `json:"pix_fee_bps"`   // taxa do Pix congelada no lote
+	PixFeeCents           int64     `json:"pix_fee_cents"` // taxa por pessoa no Pix
 	GeneratedBy           string    `json:"generated_by"`
 	GeneratedByName       string    `json:"generated_by_name"`
 	CreatedAt             time.Time `json:"created_at"`
@@ -110,7 +112,9 @@ type Charge struct {
 	UserRole        string     `json:"user_role"`
 	AvatarColor     string     `json:"avatar_color"`
 	ReferenceMonth  string     `json:"reference_month"` // YYYY-MM
-	AmountCents     int64      `json:"amount_cents"`
+	AmountCents     int64      `json:"amount_cents"`    // rateio
+	PixFeeCents     int64      `json:"pix_fee_cents"`   // taxa do Pix repassada
+	PixTotalCents   int64      `json:"pix_total_cents"` // o que o jogador paga no Pix
 	Status          string     `json:"status"`
 	DueDate         string     `json:"due_date"` // YYYY-MM-DD
 	PaidAt          *time.Time `json:"paid_at,omitempty"`

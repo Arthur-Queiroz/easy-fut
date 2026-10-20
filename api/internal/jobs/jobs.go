@@ -179,7 +179,7 @@ func (r *Runner) scheduleOverdueReminders(ctx context.Context, overdue []store.O
 		message := renderTemplate(template, map[string]string{
 			"{{nome}}":            o.UserName,
 			"{{mes_referencia}}":  o.ReferenceMonth,
-			"{{valor}}":           formatCentsBR(o.AmountCents),
+			"{{valor}}":           formatCentsBR(o.AmountCents + o.PixFeeCents),
 			"{{data_vencimento}}": dueDate.Format("02/01/2006"),
 		})
 		if _, err := r.store.ScheduleNotification(ctx, o.UserID, &o.ID, phone, message, time.Now()); err != nil {

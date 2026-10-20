@@ -74,7 +74,7 @@ func (s *Server) handleCreatePixCharge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	order, err := s.mercadoPago.CreatePixOrder(r.Context(), mercadopago.CreatePixOrderInput{
-		Amount:             amountInReais(charge.AmountCents),
+		Amount:             amountInReais(charge.PixTotalCents), // rateio + taxa repassada
 		ChargeID:           charge.ID,
 		PayerEmail:         payerEmail,
 		PayerFirstName:     payerFirstName,

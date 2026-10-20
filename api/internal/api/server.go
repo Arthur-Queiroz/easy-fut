@@ -127,6 +127,7 @@ func (s *Server) Handler() http.Handler {
 			r.Delete("/admin/team-presets/{id}", s.handleDeleteTeamPreset)
 
 			r.Get("/admin/charges", s.handleAdminCharges)
+			r.Get("/admin/charges/pix-fee", s.handlePixFeePreview)
 			r.Post("/admin/charges/generate", s.handleGenerateCharges)
 			r.Post("/admin/charges/generate-match", s.handleGenerateMatchCharges)
 			r.Delete("/admin/charges/batches/{id}", s.handleDeleteBatch)

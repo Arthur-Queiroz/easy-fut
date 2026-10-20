@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { api, errorMessage } from '../../api/client'
 import type { Charge, ChargeBatch, User } from '../../api/types'
 import { currentMonth, formatCents, formatDMY, formatMonth, formatTimestamp } from '../../lib/format'
+import { formatBasisPoints } from '../../lib/charges'
 import { sanitizeCSVCell } from '../../lib/security'
 import AdminLayout from '../../components/layout/AdminLayout.vue'
 import NavIcon from '../../components/layout/NavIcon.vue'
@@ -193,6 +194,27 @@ const matchIndividualCents = computed(() =>
   matchSelected.value.length > 0 ? Math.floor(matchTotalCents.value / matchSelected.value.length) : 0,
 )
 
+// Prévia do total no Pix com a taxa repassada. O cálculo é da API (o mesmo
+// usado ao gerar o lote); a tela só pergunta.
+const pixPreview = ref<Record<number, number>>({}) // rateio → total no Pix
+let previewTimer: ReturnType<typeof setTimeout> | undefined
+watch([individualCents, matchIndividualCents], (bases) => {
+  clearTimeout(previewTimer)
+  previewTimer = setTimeout(() => {
+    for (const base of bases) {
+      if (base <= 0 || pixPreview.value[base] !== undefined) continue
+      api
+        .get<{ total_cents: number }>('/admin/charges/pix-fee', { params: { base_cents: base } })
+        .then(({ data }) => (pixPreview.value = { ...pixPreview.value, [base]: data.total_cents }))
+        .catch(() => {})
+    }
+  }, 300)
+})
+const pixTotalFor = (base: number) => {
+  const total = pixPreview.value[base]
+  return total !== undefined && total > base ? total : null
+}
+
 async function openMatchModal() {
   matchModalOpen.value = true
   matchError.value = ''
@@ -366,6 +388,10 @@ const monthOptions = computed(() => {
             <div class="flex justify-between">
               <span>Usuários no rateio</span><strong class="text-white">{{ monthlyBatch.user_count }}</strong>
             </div>
+            <div v-if="monthlyBatch.pix_fee_cents > 0" class="flex justify-between">
+              <span>No Pix (taxa de {{ formatBasisPoints(String(monthlyBatch.pix_fee_bps)) }}%)</span>
+              <strong class="text-white">{{ formatCents(monthlyBatch.individual_amount_cents + monthlyBatch.pix_fee_cents) }}</strong>
+            </div>
             <div class="flex justify-between">
               <span>Gerada em</span>
               <strong class="text-white">{{ formatTimestamp(monthlyBatch.created_at) }} · por {{ monthlyBatch.generated_by_name.split(' ')[0] }}</strong>
@@ -408,6 +434,9 @@ const monthOptions = computed(() => {
           <div class="mt-3 flex justify-between text-[13px] text-ink2">
             <span>{{ activeUsers }} ativos no rateio</span>
             <span>= <strong class="text-ink">{{ formatCents(individualCents) }}</strong> cada</span>
+          </div>
+          <div v-if="pixTotalFor(individualCents)" class="mt-1 text-right text-[12px] text-ink3" data-test="pix-preview">
+            {{ formatCents(pixTotalFor(individualCents)!) }} no Pix, com a taxa repassada
           </div>
           <p v-if="error" class="mt-3 text-[13px] font-medium text-danger">{{ error }}</p>
           <BaseButton class="mt-3.5 w-full" :loading="generating" @click="generate">
@@ -476,6 +505,9 @@ const monthOptions = computed(() => {
                     <Badge tone="info">Avulsa</Badge>
                     <span class="text-[12px] text-ink2">
                       {{ formatCents(section.batch.individual_amount_cents) }} por jogador ·
+                      <template v-if="section.batch.pix_fee_cents > 0">
+                        {{ formatCents(section.batch.individual_amount_cents + section.batch.pix_fee_cents) }} no Pix ·
+                      </template>
                       {{ section.batch.user_count }} participantes
                     </span>
                     <button
@@ -506,7 +538,12 @@ const monthOptions = computed(() => {
                     </span>
                   </div>
                 </td>
-                <td class="px-3 py-2.5 text-[13px] font-medium">{{ formatCents(charge.amount_cents) }}</td>
+                <td class="whitespace-nowrap px-3 py-2.5 text-[13px] font-medium">
+                  {{ formatCents(charge.amount_cents) }}
+                  <span v-if="charge.pix_fee_cents > 0" class="block text-[11px] font-normal text-ink3">
+                    {{ formatCents(charge.pix_total_cents) }} no Pix
+                  </span>
+                </td>
                 <td class="px-3 py-2.5">
                   <Badge :tone="statusInfo(charge).tone" :solid="statusInfo(charge).solid" dot>
                     {{ statusInfo(charge).label }}
@@ -675,6 +712,9 @@ const monthOptions = computed(() => {
       <div class="mt-3 flex justify-between text-[13px] text-ink2">
         <span>{{ matchSelected.length }} participantes no rateio</span>
         <span>= <strong class="text-ink">{{ formatCents(matchIndividualCents) }}</strong> cada</span>
+      </div>
+      <div v-if="pixTotalFor(matchIndividualCents)" class="mt-1 text-right text-[12px] text-ink3">
+        {{ formatCents(pixTotalFor(matchIndividualCents)!) }} no Pix, com a taxa repassada
       </div>
       <p v-if="matchError" class="mt-3 text-[13px] font-medium text-danger">{{ matchError }}</p>
       <BaseButton class="mt-4 w-full" :loading="matchSaving" @click="generateMatchCharge">

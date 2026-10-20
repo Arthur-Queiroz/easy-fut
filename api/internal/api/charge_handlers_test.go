@@ -1,9 +1,11 @@
 package api
 
 import (
+	"errors"
 	"testing"
 	"time"
 
+	"futdarapaziada/api/internal/billing"
 	"futdarapaziada/api/internal/store"
 )
 
@@ -49,5 +51,32 @@ func TestReminderMessage(t *testing.T) {
 	want := "Oi, João: 2026-07 custa R$ 125,00, vence 07/07/2026. PIX: pix-copia-e-cola"
 	if got != want {
 		t.Errorf("reminderMessage() = %q, want %q", got, want)
+	}
+}
+
+// Com a taxa do Pix repassada, o lembrete informa o valor que o jogador paga.
+func TestReminderMessageUsesPixTotal(t *testing.T) {
+	charge := store.Charge{ReferenceMonth: "2099-01", AmountCents: 6000, PixFeeCents: 60}
+	got := reminderMessage("{{valor}}", "Ana", charge, time.Date(2099, time.January, 10, 0, 0, 0, 0, time.UTC))
+	if got != "R$ 60,60" {
+		t.Errorf("reminderMessage() = %q, want R$ 60,60", got)
+	}
+}
+
+func TestValidateSettings(t *testing.T) {
+	valid := []map[string]string{
+		{"pix_fee_bps": "99"},
+		{"pix_fee_bps": "0", "voting_close_days": "2"},
+		{"reminder_template": "qualquer texto"},
+	}
+	for _, settings := range valid {
+		if err := validateSettings(settings); err != nil {
+			t.Errorf("validateSettings(%v) = %v", settings, err)
+		}
+	}
+	for _, raw := range []string{"", "-5", "0,99", "2000"} {
+		if err := validateSettings(map[string]string{"pix_fee_bps": raw}); !errors.Is(err, billing.ErrInvalidFeeRate) {
+			t.Errorf("pix_fee_bps=%q: err = %v, want ErrInvalidFeeRate", raw, err)
+		}
 	}
 }

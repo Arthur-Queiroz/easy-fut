@@ -1,12 +1,16 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
+	"futdarapaziada/api/internal/billing"
 	"futdarapaziada/api/internal/busdays"
 	"futdarapaziada/api/internal/notify"
 	"futdarapaziada/api/internal/store"
@@ -41,6 +45,39 @@ func (s *Server) handleAdminCharges(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"batches": orEmpty(batches), "charges": orEmpty(charges)})
 }
 
+// pixFeeRate é a taxa do Pix repassada nas cobranças geradas agora
+// (configuração pix_fee_bps). Um valor inválido no banco cai no padrão.
+func (s *Server) pixFeeRate(ctx context.Context) billing.FeeRate {
+	raw := s.store.SettingString(ctx, "pix_fee_bps", "")
+	if raw == "" {
+		return billing.DefaultPixRate
+	}
+	bps, err := billing.ParseBasisPoints(raw)
+	if err != nil {
+		log.Printf("pix_fee_bps inválido (%q); usando o padrão", raw)
+		return billing.DefaultPixRate
+	}
+	return billing.FeeRate{BasisPoints: bps}
+}
+
+// handlePixFeePreview mostra ao admin, antes de gerar o lote, quanto cada
+// jogador vai pagar no Pix com a taxa repassada.
+func (s *Server) handlePixFeePreview(w http.ResponseWriter, r *http.Request) {
+	base, err := strconv.ParseInt(r.URL.Query().Get("base_cents"), 10, 64)
+	if err != nil || base <= 0 {
+		writeError(w, http.StatusBadRequest, "informe base_cents > 0")
+		return
+	}
+	rate := s.pixFeeRate(r.Context())
+	fee := rate.PassOn(base)
+	writeJSON(w, http.StatusOK, map[string]int64{
+		"base_cents":  fee.BaseCents,
+		"fee_cents":   fee.FeeCents,
+		"total_cents": fee.TotalCents,
+		"fee_bps":     rate.BasisPoints,
+	})
+}
+
 func (s *Server) handleGenerateCharges(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Month            string `json:"month"` // YYYY-MM
@@ -56,7 +93,7 @@ func (s *Server) handleGenerateCharges(w http.ResponseWriter, r *http.Request) {
 
 	user := currentUser(r)
 	dueDate := busdays.AddBusinessDays(time.Now(), 5)
-	batch, err := s.store.GenerateBatch(r.Context(), body.Month, body.TotalAmountCents, dueDate, user.ID)
+	batch, err := s.store.GenerateBatch(r.Context(), body.Month, body.TotalAmountCents, dueDate, user.ID, s.pixFeeRate(r.Context()))
 	if err != nil {
 		writeStoreError(w, err)
 		return
@@ -111,7 +148,7 @@ func (s *Server) handleGenerateMatchCharges(w http.ResponseWriter, r *http.Reque
 
 	user := currentUser(r)
 	dueDate := busdays.AddBusinessDays(time.Now(), 5)
-	batch, err := s.store.GenerateMatchBatch(r.Context(), month, strings.TrimSpace(body.Title), body.TotalAmountCents, dueDate, user.ID, body.UserIDs)
+	batch, err := s.store.GenerateMatchBatch(r.Context(), month, strings.TrimSpace(body.Title), body.TotalAmountCents, dueDate, user.ID, body.UserIDs, s.pixFeeRate(r.Context()))
 	if errors.Is(err, store.ErrInvalidParticipants) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -225,7 +262,7 @@ func reminderMessage(template, recipientName string, charge store.Charge, dueDat
 	replacements := map[string]string{
 		"{{nome}}":            recipientName,
 		"{{mes_referencia}}":  charge.ReferenceMonth,
-		"{{valor}}":           formatCentsBR(charge.AmountCents),
+		"{{valor}}":           formatCentsBR(charge.AmountCents + charge.PixFeeCents),
 		"{{data_vencimento}}": dueDate.Format("02/01/2006"),
 		"{{codigo_pix}}":      charge.PixPayload,
 	}

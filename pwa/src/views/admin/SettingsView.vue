@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { api, errorMessage } from '../../api/client'
+import { feePercentToBasisPoints, formatBasisPoints } from '../../lib/charges'
 import AdminLayout from '../../components/layout/AdminLayout.vue'
 import BaseButton from '../../components/ui/BaseButton.vue'
 import Card from '../../components/ui/Card.vue'
@@ -11,6 +12,10 @@ const error = ref('')
 const saved = ref(false)
 const saving = ref(false)
 
+// A API guarda pix_fee_bps (99); o admin edita em porcentagem (0,99).
+const pixFeeInput = ref('')
+const pixFeeBps = computed(() => feePercentToBasisPoints(pixFeeInput.value))
+
 // Ficam aqui e não no template porque as chaves duplas colidem com a
 // interpolação do Vue.
 const templateVars = ['{{nome}}', '{{mes_referencia}}', '{{valor}}', '{{data_vencimento}}', '{{codigo_pix}}']
@@ -18,14 +23,18 @@ const templateVars = ['{{nome}}', '{{mes_referencia}}', '{{valor}}', '{{data_ven
 onMounted(async () => {
   const { data } = await api.get<Record<string, string>>('/admin/settings')
   settings.value = data
+  pixFeeInput.value = formatBasisPoints(data.pix_fee_bps)
 })
 
 async function save() {
   error.value = ''
   saving.value = true
   try {
-    const { data } = await api.put<Record<string, string>>('/admin/settings', settings.value)
+    const body = { ...settings.value }
+    if (pixFeeInput.value.trim() !== '') body.pix_fee_bps = pixFeeBps.value
+    const { data } = await api.put<Record<string, string>>('/admin/settings', body)
     settings.value = data
+    pixFeeInput.value = formatBasisPoints(data.pix_fee_bps)
     saved.value = true
     setTimeout(() => (saved.value = false), 2500)
   } catch (e) {
@@ -50,6 +59,14 @@ async function save() {
             <input v-model="settings.overdue_inactivate_days" type="number" min="0" class="field max-w-[160px]" />
             <span class="text-[11.5px] text-ink3">
               Contados após o vencimento. Com 0, o usuário é inativado no dia seguinte ao 5º dia útil.
+            </span>
+          </label>
+          <label class="flex flex-col gap-1.5">
+            <span class="text-[13px] font-semibold text-ink2">Taxa do Pix repassada ao jogador (%)</span>
+            <input v-model="pixFeeInput" inputmode="decimal" placeholder="0,99" class="field max-w-[160px]" aria-label="Taxa do Pix (%)" />
+            <span class="text-[11.5px] text-ink3">
+              Somada ao valor de cada cobrança nas próximas gerações, para o grupo receber o rateio inteiro depois da
+              tarifa do Mercado Pago. Cobranças já geradas não mudam. Com 0, não há repasse.
             </span>
           </label>
           <label class="flex flex-col gap-1.5">

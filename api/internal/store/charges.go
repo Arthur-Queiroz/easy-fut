@@ -6,11 +6,13 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"futdarapaziada/api/internal/billing"
 )
 
 const chargeColumns = `
 	c.id, c.batch_id, b.kind, b.title, c.user_id, u.name, u.role, u.avatar_color,
-	to_char(c.reference_month, 'YYYY-MM'), c.amount_cents, c.status, c.due_date::text,
+	to_char(c.reference_month, 'YYYY-MM'), c.amount_cents, c.pix_fee_cents, c.status, c.due_date::text,
 	c.paid_at, c.paid_method, c.registered_by, coalesce(r.name, ''), c.pix_payload,
 	c.pix_ticket_url, c.pix_qr_code_base64, c.provider_order_id, c.created_at`
 
@@ -23,12 +25,13 @@ const chargeJoins = `
 func scanCharge(row pgx.Row) (Charge, error) {
 	var c Charge
 	err := row.Scan(&c.ID, &c.BatchID, &c.BatchKind, &c.BatchTitle, &c.UserID, &c.UserName, &c.UserRole, &c.AvatarColor,
-		&c.ReferenceMonth, &c.AmountCents, &c.Status, &c.DueDate,
+		&c.ReferenceMonth, &c.AmountCents, &c.PixFeeCents, &c.Status, &c.DueDate,
 		&c.PaidAt, &c.PaidMethod, &c.RegisteredBy, &c.RegisteredName, &c.PixPayload,
 		&c.PixTicketURL, &c.PixQRCodeBase64, &c.ProviderOrderID, &c.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return c, ErrNotFound
 	}
+	c.PixTotalCents = c.AmountCents + c.PixFeeCents
 	return c, err
 }
 
@@ -143,7 +146,7 @@ func collectCharges(rows pgx.Rows) ([]Charge, error) {
 const batchColumns = `
 	b.id, to_char(b.reference_month, 'YYYY-MM'), b.kind, b.title,
 	b.total_amount_cents, b.user_count, b.individual_amount_cents, b.due_date::text,
-	b.generated_by, u.name, b.created_at`
+	b.pix_fee_bps, b.pix_fee_cents, b.generated_by, u.name, b.created_at`
 
 const batchJoins = `
 	from charge_batches b join users u on u.id = b.generated_by`
@@ -152,7 +155,7 @@ func scanBatch(row pgx.Row) (ChargeBatch, error) {
 	var b ChargeBatch
 	err := row.Scan(&b.ID, &b.ReferenceMonth, &b.Kind, &b.Title,
 		&b.TotalAmountCents, &b.UserCount, &b.IndividualAmountCents, &b.DueDate,
-		&b.GeneratedBy, &b.GeneratedByName, &b.CreatedAt)
+		&b.PixFeeBasisPoints, &b.PixFeeCents, &b.GeneratedBy, &b.GeneratedByName, &b.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return b, ErrNotFound
 	}
@@ -196,9 +199,10 @@ func (s *Store) batchByID(ctx context.Context, id string) (ChargeBatch, error) {
 var ErrBatchExists = errors.New("já existe cobrança gerada para este mês")
 
 // GenerateBatch cria o lote de mensalidade do mês e uma cobrança por usuário ativo,
-// registrando a fotografia do rateio (valor total, quantidade e valor individual fixos).
+// registrando a fotografia do rateio (valor total, quantidade e valor individual fixos)
+// e a taxa do Pix repassada, calculada por pixRate sobre o valor individual.
 // A mensalidade é única por mês; lotes de partida avulsa não bloqueiam a geração.
-func (s *Store) GenerateBatch(ctx context.Context, month string, totalCents int64, dueDate time.Time, generatedBy string) (ChargeBatch, error) {
+func (s *Store) GenerateBatch(ctx context.Context, month string, totalCents int64, dueDate time.Time, generatedBy string, pixRate billing.FeeRate) (ChargeBatch, error) {
 	users, err := s.ActiveUsers(ctx)
 	if err != nil {
 		return ChargeBatch{}, err
@@ -207,6 +211,7 @@ func (s *Store) GenerateBatch(ctx context.Context, month string, totalCents int6
 		return ChargeBatch{}, errors.New("nenhum usuário ativo para ratear")
 	}
 	individual := totalCents / int64(len(users))
+	pixFee := pixRate.PassOn(individual).FeeCents
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -225,18 +230,18 @@ func (s *Store) GenerateBatch(ctx context.Context, month string, totalCents int6
 
 	var batchID string
 	err = tx.QueryRow(ctx, `
-		insert into charge_batches (reference_month, kind, total_amount_cents, user_count, individual_amount_cents, due_date, generated_by)
-		values (($1 || '-01')::date, 'monthly', $2, $3, $4, $5, $6) returning id`,
-		month, totalCents, len(users), individual, dueDate, generatedBy).Scan(&batchID)
+		insert into charge_batches (reference_month, kind, total_amount_cents, user_count, individual_amount_cents, due_date, generated_by, pix_fee_bps, pix_fee_cents)
+		values (($1 || '-01')::date, 'monthly', $2, $3, $4, $5, $6, $7, $8) returning id`,
+		month, totalCents, len(users), individual, dueDate, generatedBy, pixRate.BasisPoints, pixFee).Scan(&batchID)
 	if err != nil {
 		return ChargeBatch{}, err
 	}
 
 	for _, u := range users {
 		_, err := tx.Exec(ctx, `
-			insert into charges (batch_id, user_id, reference_month, amount_cents, due_date)
-			values ($1, $2, ($3 || '-01')::date, $4, $5)`,
-			batchID, u.ID, month, individual, dueDate)
+			insert into charges (batch_id, user_id, reference_month, amount_cents, pix_fee_cents, due_date)
+			values ($1, $2, ($3 || '-01')::date, $4, $5, $6)`,
+			batchID, u.ID, month, individual, pixFee, dueDate)
 		if err != nil {
 			return ChargeBatch{}, err
 		}
@@ -250,8 +255,9 @@ func (s *Store) GenerateBatch(ctx context.Context, month string, totalCents int6
 var ErrInvalidParticipants = errors.New("todos os participantes precisam estar ativos")
 
 // GenerateMatchBatch cria um lote de partida avulsa rateando o valor total entre os
-// participantes escolhidos. Diferente da mensalidade, não há limite por mês.
-func (s *Store) GenerateMatchBatch(ctx context.Context, month, title string, totalCents int64, dueDate time.Time, generatedBy string, userIDs []string) (ChargeBatch, error) {
+// participantes escolhidos, com a taxa do Pix congelada como na mensalidade.
+// Diferente da mensalidade, não há limite por mês.
+func (s *Store) GenerateMatchBatch(ctx context.Context, month, title string, totalCents int64, dueDate time.Time, generatedBy string, userIDs []string, pixRate billing.FeeRate) (ChargeBatch, error) {
 	rows, err := s.pool.Query(ctx,
 		`select id from users where id = any($1::uuid[]) and status = 'active'`, userIDs)
 	if err != nil {
@@ -266,6 +272,7 @@ func (s *Store) GenerateMatchBatch(ctx context.Context, month, title string, tot
 		return ChargeBatch{}, ErrInvalidParticipants
 	}
 	individual := totalCents / int64(len(userIDs))
+	pixFee := pixRate.PassOn(individual).FeeCents
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -275,18 +282,18 @@ func (s *Store) GenerateMatchBatch(ctx context.Context, month, title string, tot
 
 	var batchID string
 	err = tx.QueryRow(ctx, `
-		insert into charge_batches (reference_month, kind, title, total_amount_cents, user_count, individual_amount_cents, due_date, generated_by)
-		values (($1 || '-01')::date, 'match', $2, $3, $4, $5, $6, $7) returning id`,
-		month, title, totalCents, len(userIDs), individual, dueDate, generatedBy).Scan(&batchID)
+		insert into charge_batches (reference_month, kind, title, total_amount_cents, user_count, individual_amount_cents, due_date, generated_by, pix_fee_bps, pix_fee_cents)
+		values (($1 || '-01')::date, 'match', $2, $3, $4, $5, $6, $7, $8, $9) returning id`,
+		month, title, totalCents, len(userIDs), individual, dueDate, generatedBy, pixRate.BasisPoints, pixFee).Scan(&batchID)
 	if err != nil {
 		return ChargeBatch{}, err
 	}
 
 	for _, userID := range userIDs {
 		_, err := tx.Exec(ctx, `
-			insert into charges (batch_id, user_id, reference_month, amount_cents, due_date)
-			values ($1, $2, ($3 || '-01')::date, $4, $5)`,
-			batchID, userID, month, individual, dueDate)
+			insert into charges (batch_id, user_id, reference_month, amount_cents, pix_fee_cents, due_date)
+			values ($1, $2, ($3 || '-01')::date, $4, $5, $6)`,
+			batchID, userID, month, individual, pixFee, dueDate)
 		if err != nil {
 			return ChargeBatch{}, err
 		}
@@ -400,7 +407,7 @@ func (s *Store) MarkOverdueCharges(ctx context.Context) ([]OverdueCharge, error)
 		from users u
 		where c.user_id = u.id and c.status = 'pending' and c.due_date < current_date
 		returning c.id, c.user_id, u.name, u.phone,
-			to_char(c.reference_month, 'YYYY-MM'), c.amount_cents, c.due_date::text`)
+			to_char(c.reference_month, 'YYYY-MM'), c.amount_cents, c.pix_fee_cents, c.due_date::text`)
 	if err != nil {
 		return nil, err
 	}
@@ -410,9 +417,10 @@ func (s *Store) MarkOverdueCharges(ctx context.Context) ([]OverdueCharge, error)
 	for rows.Next() {
 		var o OverdueCharge
 		if err := rows.Scan(&o.ID, &o.UserID, &o.UserName, &o.UserPhone,
-			&o.ReferenceMonth, &o.AmountCents, &o.DueDate); err != nil {
+			&o.ReferenceMonth, &o.AmountCents, &o.PixFeeCents, &o.DueDate); err != nil {
 			return nil, err
 		}
+		o.PixTotalCents = o.AmountCents + o.PixFeeCents
 		overdue = append(overdue, o)
 	}
 	return overdue, rows.Err()
