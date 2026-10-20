@@ -146,35 +146,44 @@ func (s *Store) DeleteRecurringMatch(ctx context.Context, id string) error {
 
 // MaterializeRecurringMatches cria as próximas `ahead` ocorrências de cada
 // template ativo ainda não materializadas. Idempotente (uq recurring+date).
-// Fuso: weekday/time sem fuso → a partida acontece em America/Sao_Paulo.
+// Dia e horário do template são de São Paulo; a sessão do PostgreSQL está em
+// UTC, então toda conversão de data/hora diz o fuso explicitamente.
+//
+// Na mesma transação, os usuários ativos ganham a confirmação no_response em
+// toda partida recorrente aberta, como em CreateMatch: é dela que saem o
+// lembrete por push e a lista "sem resposta". Rodando todo dia, isso também
+// alcança quem virou ativo depois que a partida foi gerada. O push de
+// "partida criada" não é enfileirado: a partida nasce semanas antes do jogo.
 func (s *Store) MaterializeRecurringMatches(ctx context.Context, ahead int) (int, error) {
 	if ahead < 1 {
 		return 0, nil
 	}
-	// Cada template: de hoje em diante, as próximas `ahead` datas que caem no weekday.
-	// Laço em SQL com generate_series evita roundtrip por template.
-	tag, err := s.pool.Exec(ctx, `
-		with next_dates as (
-			select r.id as recurring_id,
-				d::date as match_date
-			from recurring_matches r,
-			lateral (
-				select generate_series(current_date + interval '1 day', current_date + make_interval(weeks => $1) + interval '1 day', '1 day') d
-			) g
-			where extract(dow from d::date) = r.weekday
-			  and r.active
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback(ctx)
+
+	// Janela de amanhã até hoje + `ahead` semanas: 7×ahead dias, então cada
+	// dia da semana aparece exatamente `ahead` vezes.
+	tag, err := tx.Exec(ctx, `
+		with today as (
+			select (now() at time zone 'America/Sao_Paulo')::date as d
+		), next_dates as (
+			select r.id as recurring_id, g.d::date as match_date
+			from recurring_matches r, today,
+			lateral generate_series(today.d + 1, today.d + 7 * $1::int, interval '1 day') g(d)
+			where r.active and extract(dow from g.d) = r.weekday
 		)
 		insert into matches (match_date, start_time, end_time, venue, address,
 			confirmation_deadline, notes, created_by, recurring_id)
 		select n.match_date, r.start_time, r.end_time, r.venue, r.address,
-	-- FUT-004: template sem deadline explícito usa fallback: 30 min antes do início.
--- (evita partida em 'open' eterna com confirmation_deadline null, que o
--- schema não permite)
-		CASE
-			WHEN r.same_day_deadline_time IS NOT NULL
-				THEN (n.match_date + r.same_day_deadline_time)::timestamptz
-			ELSE (n.match_date + r.start_time)::timestamptz - interval '30 minutes'
-		END,
+			-- sem prazo no template: 30 min antes do início
+			case
+				when r.same_day_deadline_time is not null
+					then (n.match_date + r.same_day_deadline_time) at time zone 'America/Sao_Paulo'
+				else ((n.match_date + r.start_time) at time zone 'America/Sao_Paulo') - interval '30 minutes'
+			end,
 			'Partida recorrente', r.created_by, n.recurring_id
 		from next_dates n
 		join recurring_matches r on r.id = n.recurring_id
@@ -183,6 +192,17 @@ func (s *Store) MaterializeRecurringMatches(ctx context.Context, ahead int) (int
 			where m.recurring_id = n.recurring_id and m.match_date = n.match_date
 		)`, ahead)
 	if err != nil {
+		return 0, err
+	}
+	if _, err := tx.Exec(ctx, `
+		insert into match_confirmations (match_id, user_id)
+		select m.id, u.id
+		from matches m join users u on u.status = 'active'
+		where m.recurring_id is not null and m.status = 'open'
+		on conflict (match_id, user_id) do nothing`); err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
 		return 0, err
 	}
 	return int(tag.RowsAffected()), nil

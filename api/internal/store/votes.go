@@ -3,26 +3,135 @@ package store
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"futdarapaziada/api/internal/matches"
 )
 
-// CastVote grava o voto do usuário na categoria. As regras do voto ficam em
-// matches.Ballot; aqui a constraint unique só garante que o mesmo jogador não
-// seja votado duas vezes na categoria.
-func (s *Store) CastVote(ctx context.Context, matchID, voterID, category, candidateID string) error {
-	_, err := s.pool.Exec(ctx, `
-		insert into votes (match_id, voter_id, category, candidate_id)
-		values ($1, $2, $3, $4)`,
+// CastVote grava o voto do usuário na categoria. check recebe os candidatos
+// que o eleitor já votou nela e decide se o voto vale (matches.Ballot); nil
+// grava sem checar. A constraint unique garante que o mesmo jogador não seja
+// votado duas vezes na categoria.
+func (s *Store) CastVote(ctx context.Context, matchID, voterID, category, candidateID string, check func(previous []string) error) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if err := lockVoter(ctx, tx, matchID, voterID); err != nil {
+		return err
+	}
+	if check != nil {
+		previous, err := votesInCategory(ctx, tx, matchID, voterID, category)
+		if err != nil {
+			return err
+		}
+		if err := check(previous); err != nil {
+			return err
+		}
+	}
+	if err := insertVote(ctx, tx, matchID, voterID, category, candidateID); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// lockVoter serializa, até o fim da transação, as gravações de voto de um
+// eleitor numa partida: o limite por categoria é checado com os votos lidos
+// depois do lock, e envios simultâneos não passam dele.
+func lockVoter(ctx context.Context, tx pgx.Tx, matchID, voterID string) error {
+	_, err := tx.Exec(ctx, `select pg_advisory_xact_lock(hashtextextended($1::text || ':' || $2::text, 0))`, matchID, voterID)
+	return err
+}
+
+func votesInCategory(ctx context.Context, tx pgx.Tx, matchID, voterID, category string) ([]string, error) {
+	rows, err := tx.Query(ctx, `
+		select candidate_id from votes
+		where match_id = $1 and voter_id = $2 and category = $3
+		order by created_at`, matchID, voterID, category)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return collectIDs(rows)
+}
+
+// insertVote usa clock_timestamp para que votos gravados na mesma transação
+// mantenham a ordem em MyVotes.
+func insertVote(ctx context.Context, tx pgx.Tx, matchID, voterID, category, candidateID string) error {
+	_, err := tx.Exec(ctx, `
+		insert into votes (match_id, voter_id, category, candidate_id, created_at)
+		values ($1, $2, $3, $4, clock_timestamp())`,
 		matchID, voterID, category, candidateID)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
 		return matches.ErrDuplicateVote
 	}
 	return err
+}
+
+// ReplaceVotes grava o voto completo do "Enviar votos": em cada categoria de
+// votes, ficam valendo exatamente os candidatos da lista (já validados por
+// matches.Submission). Votos mantidos não são regravados; categorias fora do
+// mapa não mudam. Tudo numa transação, então trocar um voto com o limite
+// cheio não depende da ordem entre remover e adicionar.
+func (s *Store) ReplaceVotes(ctx context.Context, matchID, voterID string, votes map[matches.Category][]string) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	if err := lockVoter(ctx, tx, matchID, voterID); err != nil {
+		return err
+	}
+	// Guarda atômica: o encerramento da votação não passa no meio do envio.
+	var status string
+	err = tx.QueryRow(ctx, `select status from matches where id = $1 for share`, matchID).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if err := matches.CheckVotingOpen(status); err != nil {
+		return err
+	}
+
+	for _, category := range matches.Categories {
+		candidates, ok := votes[category]
+		if !ok {
+			continue
+		}
+		if candidates == nil {
+			candidates = []string{} // nil viraria NULL e o delete não apagaria nada
+		}
+		if _, err := tx.Exec(ctx, `
+			delete from votes
+			where match_id = $1 and voter_id = $2 and category = $3
+			  and not (candidate_id::text = any($4::text[]))`,
+			matchID, voterID, string(category), candidates); err != nil {
+			return err
+		}
+		previous, err := votesInCategory(ctx, tx, matchID, voterID, string(category))
+		if err != nil {
+			return err
+		}
+		for _, candidate := range candidates {
+			if slices.Contains(previous, candidate) {
+				continue
+			}
+			if err := insertVote(ctx, tx, matchID, voterID, string(category), candidate); err != nil {
+				return err
+			}
+		}
+	}
+	return tx.Commit(ctx)
 }
 
 // OpenExpiredVoting abre automaticamente a votação de partidas que já
@@ -225,9 +334,9 @@ func (s *Store) MatchesVoteSummary(ctx context.Context, fromISO, toISO string) (
 	return out, rows.Err()
 }
 func (s *Store) VoteResults(ctx context.Context, matchID string) ([]VoteResult, error) {
-	results := []VoteResult{
-		{Category: string(matches.TopScorer), Winners: []Winner{}},
-		{Category: string(matches.WorstPlayer), Winners: []Winner{}},
+	results := make([]VoteResult, len(matches.Categories))
+	for i, c := range matches.Categories {
+		results[i] = VoteResult{Category: string(c), Winners: []Winner{}}
 	}
 	for i := range results {
 		rows, err := s.pool.Query(ctx, `

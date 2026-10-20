@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, errorMessage } from '../api/client'
 import type { ConfirmationEntry, MatchDetail } from '../api/types'
@@ -38,7 +38,8 @@ const RESULT_CATEGORIES: { key: VoteCategory; resultLabel: string; icon: string;
 ]
 
 // FUT-003: rascunho de votos { top_scorer: [], worst_player: [], best_goal: [] }.
-// Toques alteram o rascunho localmente; "Enviar votos" aplica o diff na API.
+// Toques alteram o rascunho localmente; "Enviar votos" manda à API o voto
+// completo das categorias alteradas, numa requisição só.
 const draft = ref<Record<string, string[]>>({})
 const submitting = ref(false)
 const savedToast = ref(false)
@@ -74,14 +75,16 @@ const persisted = computed<Record<string, string[]>>(() => ({
 // o que o usuário vê marcado: rascunho se existe, senão o persistido
 const marks = computed<Record<string, string[]>>(() => ({ top_scorer: draft.value.top_scorer ?? persisted.value.top_scorer ?? [], worst_player: draft.value.worst_player ?? persisted.value.worst_player ?? [], best_goal: draft.value.best_goal ?? persisted.value.best_goal ?? [] }))
 
-const draftIsDirty = computed(() => {
+// categorias em que o marcado difere do persistido → lista que deve valer
+const changedVotes = computed<Record<string, string[]>>(() => {
+  const votes: Record<string, string[]> = {}
   for (const c of CATEGORY_KEYS) {
-    const d = [...(draft.value[c] ?? [])].sort()
-    const p = [...(persisted.value[c] ?? [])].sort()
-    if (d.join(',') !== p.join(',')) return true
+    if ([...marks.value[c]].sort().join(',') !== [...persisted.value[c]].sort().join(',')) votes[c] = marks.value[c]
   }
-  return false
+  return votes
 })
+
+const draftIsDirty = computed(() => Object.keys(changedVotes.value).length > 0)
 
 function toggleMark(category: VoteCategory, candidateId: string) {
   if (!canVote.value) return
@@ -100,23 +103,11 @@ function toggleMark(category: VoteCategory, candidateId: string) {
   saveDraft()
 }
 
-// diff rascunho → persistido: o que adicionar e o que remover
-function draftDiff() {
-  const toAdd: { category: string; candidateId: string }[] = []
-  const toRemove: { category: string; candidateId: string }[] = []
-  for (const c of CATEGORY_KEYS) {
-    const m = marks.value[c]
-    const p = persisted.value[c]
-    for (const id of m) if (!p.includes(id)) toAdd.push({ category: c, candidateId: id })
-    for (const id of p) if (!m.includes(id)) toRemove.push({ category: c, candidateId: id })
-  }
-  return { toAdd, toRemove }
-}
-
+// PUT substitui o voto da categoria de uma vez: trocar um jogador com os 2
+// votos usados não depende da ordem entre remover e adicionar.
 async function submitVotes() {
   if (submitting.value || !votingOpen.value) return
-  const { toAdd, toRemove } = draftDiff()
-  if (toAdd.length === 0 && toRemove.length === 0) {
+  if (!draftIsDirty.value) {
     savedToast.value = true
     resetToastTimer()
     return
@@ -124,11 +115,7 @@ async function submitVotes() {
   submitting.value = true
   error.value = ''
   try {
-    const calls = [
-      ...toRemove.map((v) => api.delete(`/matches/${props.matchId}/votes/${v.category}/${v.candidateId}`)),
-      ...toAdd.map((v) => api.post(`/matches/${props.matchId}/votes`, { category: v.category, candidate_id: v.candidateId })),
-    ]
-    await Promise.all(calls)
+    await api.put(`/matches/${props.matchId}/votes`, { votes: changedVotes.value })
     draft.value = {}
     saveDraft()
     await load()
@@ -141,16 +128,19 @@ async function submitVotes() {
   }
 }
 
-// auto-envio: sair da tela ou fechar o app com rascunho sujo envia o resto.
-window.addEventListener('pagehide', () => {
-  if (draftIsDirty.value && !submitting.value) {
-    const { toAdd, toRemove } = draftDiff()
-    void api.get(`/matches/${props.matchId}`).then(() => {
-      for (const v of toAdd) void api.post(`/matches/${props.matchId}/votes`, { category: v.category, candidate_id: v.candidateId }).catch(() => {})
-      for (const v of toRemove) void api.delete(`/matches/${props.matchId}/votes/${v.category}/${v.candidateId}`).catch(() => {})
-    }).catch(() => {})
-  }
-})
+// Auto-envio: sair da tela ou fechar o app com rascunho pendente envia o que
+// falta. fetch com keepalive termina mesmo com a página fechando (o Axios
+// não). Se falhar, o rascunho continua no localStorage e volta na reabertura.
+function flushDraft() {
+  if (!draftIsDirty.value || submitting.value || !votingOpen.value) return
+  void fetch(`/api/matches/${props.matchId}/votes`, {
+    method: 'PUT',
+    keepalive: true,
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ votes: changedVotes.value }),
+  }).catch(() => {})
+}
 
 function resetToastTimer() {
   if (savedToastTimer) clearTimeout(savedToastTimer)
@@ -160,6 +150,11 @@ function resetToastTimer() {
 onMounted(() => {
   load()
   loadDraft()
+  window.addEventListener('pagehide', flushDraft)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('pagehide', flushDraft)
+  flushDraft()
 })
 watch(() => props.matchId, () => { load(); loadDraft() })
 

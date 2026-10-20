@@ -46,12 +46,15 @@ Estados (`matches.status`):
   confirmação opcional; sem prazo, 30 min antes do início). Admin em
   `/admin/recorrencias`.
 - Job diário (`15 8 * * *` no fuso do processo, que é São Paulo: 08h15)
-  materializa as próximas ocorrências de cada template
-  ativo, sem recriar datas que já existem (`recurring_id + match_date`). Uma
-  partida gerada pode ser editada sem afetar o template; excluir o template
-  mantém as partidas.
-- Ver `.agents/PENDENCIAS.md`: a materialização gera 5 ocorrências na
-  véspera do dia do template e não cria confirmações nem push.
+  materializa as 4 próximas ocorrências de cada template ativo (janela de
+  amanhã a hoje + 28 dias), sem recriar datas que já existem
+  (`recurring_id + match_date`). Dia e horários do template são de São
+  Paulo. Uma partida gerada pode ser editada sem afetar o template; excluir
+  o template mantém as partidas.
+- No mesmo job, todo usuário ativo ganha confirmação `no_response` nas
+  partidas recorrentes abertas (inclusive quem virou ativo depois da
+  geração), o que habilita o lembrete por push. Não há push de "partida
+  criada" para recorrentes.
 
 ## Votação
 
@@ -62,12 +65,18 @@ Categorias: `top_scorer` (artilheiro), `worst_player` (perna de pau) e
 
 - Só vota e só recebe voto quem participou da partida (confirmou `going`).
 - Até 2 votos por categoria, em jogadores distintos; o voto pode ser
-  desfeito enquanto a votação estiver aberta.
+  desfeito enquanto a votação estiver aberta. O limite vale também com
+  envios simultâneos: as gravações de um eleitor numa partida são
+  serializadas por lock (`lockVoter` em `store/votes.go`).
 - Não vale votar em si mesmo como `worst_player`.
 - Empate na apuração devolve mais de um vencedor. A apuração só é exposta
   depois de `finished`.
-- A PWA monta um rascunho e envia o diff ao tocar em "Enviar votos" (FUT-003);
-  sair da tela com rascunho envia o restante automaticamente.
+- A PWA monta um rascunho e, ao tocar em "Enviar votos" (FUT-003), manda
+  `PUT /matches/{id}/votes` com a lista completa de cada categoria alterada
+  (`matches.Submission`); a troca é atômica. Sair da tela ou fechar o app
+  com rascunho pendente faz o mesmo envio com `keepalive`. `POST` e `DELETE`
+  de um voto continuam aceitos (PWA anterior).
+- A apuração cobre as 3 categorias, e o feed anuncia o vencedor de cada uma.
 - Admin vê apuração completa, votos individuais e comparativo em
   `/admin/votos` (FUT-005).
 

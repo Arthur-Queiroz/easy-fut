@@ -5,10 +5,11 @@ import { defineComponent, h } from 'vue'
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
+  put: vi.fn(),
   delete: vi.fn(),
 }))
 vi.mock('../api/client', () => ({
-  api: { get: mocks.get, post: mocks.post, delete: mocks.delete },
+  api: { get: mocks.get, post: mocks.post, put: mocks.put, delete: mocks.delete },
   errorMessage: () => 'Erro de conexão',
 }))
 import MatchDetailContent from './MatchDetailContent.vue'
@@ -59,13 +60,22 @@ beforeEach(() => {
   localStorage.clear()
   mocks.get.mockResolvedValue({ data: detail() })
   mocks.post.mockResolvedValue({ data: { ok: true } })
+  mocks.put.mockResolvedValue({ data: { ok: true } })
   mocks.delete.mockResolvedValue({ data: { ok: true } })
 })
+
+const withVotes = (votes: Record<string, string[]>) => {
+  const d = detail()
+  Object.assign(d.my_votes, votes)
+  mocks.get.mockResolvedValue({ data: d })
+}
+const candidate = (w: ReturnType<typeof mountC>, name: string, index = 0) =>
+  w.findAll('button').filter((b) => b.text().includes(name))[index]
 
 const sendButton = (w: ReturnType<typeof mountC>) => w.findAll('button').find((b) => b.text().includes('Enviar votos'))
 
 describe('voting draft + submit (FUT-003)', () => {
-  it('marcas alteram rascunho e botão aparece; submit envia POST de cada marca', async () => {
+  it('marcas alteram rascunho e botão aparece; submit envia o voto completo num PUT', async () => {
     const w = mountC()
     await flushPromises()
     const candidateButtons = w.findAll('button').filter((b) => /Ana|Bruno|Caio/.test(b.text()))
@@ -76,24 +86,76 @@ describe('voting draft + submit (FUT-003)', () => {
     expect(sendButton(w)).toBeDefined()
     await sendButton(w)!.trigger('click')
     await flushPromises()
-    const posted = mocks.post.mock.calls.filter((c) => String(c[0]).includes('/votes'))
-    expect(posted).toHaveLength(2)
-    for (const c of posted) expect(c[1]).toEqual({ category: 'top_scorer', candidate_id: expect.any(String) })
+    // só a categoria alterada vai no envio
+    expect(mocks.put).toHaveBeenCalledTimes(1)
+    expect(mocks.put).toHaveBeenCalledWith('/matches/m1/votes', { votes: { top_scorer: ['u-a', 'u-b'] } })
+    expect(mocks.post).not.toHaveBeenCalled()
+    expect(mocks.delete).not.toHaveBeenCalled()
   })
 
-  it('desmarcar candidato persistido gera DELETE no submit', async () => {
-    const d = detail()
-    ;(d.my_votes as Record<string, string[]>).top_scorer = ['u-a']
-    mocks.get.mockResolvedValue({ data: d })
+  it('desmarcar candidato persistido envia a lista sem ele', async () => {
+    withVotes({ top_scorer: ['u-a'] })
     const w = mountC()
     await flushPromises()
-    // Ana vem marcada: clicar desmarca
-    const ana = w.findAll('button').find((b) => b.text().includes('Ana'))!
-    await ana.trigger('click')
-    await w.findAll('button').find((b) => b.text().includes('Enviar votos'))!.trigger('click')
+    await candidate(w, 'Ana').trigger('click') // Ana vem marcada: clicar desmarca
+    await sendButton(w)!.trigger('click')
     await flushPromises()
-    expect(mocks.delete).toHaveBeenCalledWith('/matches/m1/votes/top_scorer/u-a')
+    expect(mocks.put).toHaveBeenCalledWith('/matches/m1/votes', { votes: { top_scorer: [] } })
+  })
+
+  it('trocar um voto com os 2 usados é um envio só, sem DELETE + POST', async () => {
+    withVotes({ top_scorer: ['u-a', 'u-b'] })
+    const w = mountC()
+    await flushPromises()
+    await candidate(w, 'Bruno').trigger('click') // desmarca Bruno
+    await candidate(w, 'Caio').trigger('click') // marca Caio
+    await sendButton(w)!.trigger('click')
+    await flushPromises()
+    expect(mocks.put).toHaveBeenCalledWith('/matches/m1/votes', { votes: { top_scorer: ['u-a', 'u-c'] } })
     expect(mocks.post).not.toHaveBeenCalled()
+    expect(mocks.delete).not.toHaveBeenCalled()
+  })
+
+  it('sem mudança no rascunho o botão mostra votos registrados', async () => {
+    withVotes({ worst_player: ['u-c'] })
+    const w = mountC()
+    await flushPromises()
+    await candidate(w, 'Ana').trigger('click')
+    await candidate(w, 'Ana').trigger('click') // marca e desmarca: volta ao persistido
+    expect(sendButton(w)).toBeUndefined()
+    expect(w.text()).toContain('Votos registrados ✓')
+  })
+
+  it('sair da tela com rascunho envia o voto com keepalive', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"ok":true}'))
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      const w = mountC()
+      await flushPromises()
+      await candidate(w, 'Ana').trigger('click')
+      w.unmount()
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      const [url, init] = fetchMock.mock.calls[0]
+      expect(url).toBe('/api/matches/m1/votes')
+      expect(init).toMatchObject({ method: 'PUT', keepalive: true })
+      expect(JSON.parse(init.body)).toEqual({ votes: { top_scorer: ['u-a'] } })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('sair da tela sem rascunho não envia nada', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      const w = mountC()
+      await flushPromises()
+      w.unmount()
+      window.dispatchEvent(new Event('pagehide'))
+      expect(fetchMock).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it('não permite marcar mais de 2 por categoria', async () => {
