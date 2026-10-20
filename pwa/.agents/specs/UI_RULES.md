@@ -18,6 +18,8 @@
 - Monte telas com os componentes de `components/ui/` antes de escrever
   marcação nova: `Card`, `SectionLabel`, `Badge`, `BaseButton`, `Avatar`,
   `Modal`, `EmptyState`, `PasswordInput`.
+- Escolha entre muitas opções (partida, jogador) usa `SearchSelect`: dropdown
+  com busca sem acento e navegação por teclado.
 - Lista vazia usa `EmptyState`; ação em andamento usa `BaseButton` com
   `loading`; erro de API aparece perto da ação, com `errorMessage(error)`.
 
@@ -33,6 +35,14 @@
   `lime`. Reaproveite-os para estados (pendente, vencida, paga…).
 - Fontes: Manrope (`font-sans`) no texto, Barlow Condensed
   (`font-condensed`) em números e títulos de destaque.
+
+## Gráficos
+
+- Uma série por gráfico, sem legenda: destaque em `bg-brand`, o resto em
+  `bg-chartMuted` (par validado para daltonismo nos dois temas). O valor fica
+  escrito na barra; tooltip só complementa e também abre por foco.
+- Destaque nunca só por cor: o líder ganha ícone, e há sempre uma tabela ou
+  lista com os mesmos números. Exemplos em `components/admin/`.
 
 ## Segurança na interface
 

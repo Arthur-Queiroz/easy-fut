@@ -8,10 +8,10 @@ src/
   api/client.ts         instância Axios (baseURL /api) + errorMessage()
   api/types.ts          tipos espelhando o JSON da API Go
   components/
-    ui/                 Card, Badge, Avatar, BaseButton, Modal, EmptyState…
+    ui/                 Card, Badge, Avatar, BaseButton, Modal, EmptyState, SearchSelect…
     layout/             MobileShell (app), AdminLayout, BottomNav, TopNav, NavIcon
     pwa/                InstallPrompt, PushSettings
-    admin/              componentes exclusivos do admin
+    admin/              componentes exclusivos do admin (sorteio, gráficos de votos)
   views/
     auth/               convite, cadastro, login, recuperação de senha
     app/                início, partida, times, pagamentos, histórico, perfil, bloqueado
@@ -20,6 +20,8 @@ src/
     format.ts           datas e valores no padrão brasileiro
     security.ts         cores, URLs, arquivos de mídia, senha, CSV
     push.ts             inscrição Web Push
+    search.ts           normalização de busca (sem acento) e tipo das opções de SearchSelect
+    votes.ts            cálculos do dashboard de votos (barras, filtros, participação)
 public/push-sw.js       handler de push importado pelo service worker gerado
 design/design/          mockups e tokens originais (referência visual)
 ```

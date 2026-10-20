@@ -31,6 +31,8 @@
   --info: #2563eb;
   --info-bg: #e5edfc;
   --lime: #2ee07c;
+  /* barra de gráfico sem destaque (validada contra --surface e --brand) */
+  --chart-muted: #a9b8ae;
   --shadow: 0 1px 2px rgba(10, 40, 25, 0.06), 0 4px 14px rgba(10, 40, 25, 0.08);
 }
 
@@ -52,6 +54,7 @@
   --danger-bg: #3c1b1b;
   --info: #6ea8ff;
   --info-bg: #1b2c4a;
+  --chart-muted: #5f6b67;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
