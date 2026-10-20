@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -53,38 +54,121 @@ func TestVoteRepeatedOnSameCandidateIsRejected(t *testing.T) {
 	ana, bia := voteTestUser(t, s, "Ana"), voteTestUser(t, s, "Bia")
 	match := voteTestMatch(t, s, ana, ana, bia)
 
-	if err := s.CastVote(ctx, match, ana, "top_scorer", bia); err != nil {
+	if err := s.CastVote(ctx, match, ana, "top_scorer", bia, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.CastVote(ctx, match, ana, "top_scorer", bia); !errors.Is(err, matches.ErrDuplicateVote) {
+	if err := s.CastVote(ctx, match, ana, "top_scorer", bia, nil); !errors.Is(err, matches.ErrDuplicateVote) {
 		t.Fatalf("segundo voto igual: err = %v, want ErrDuplicateVote", err)
 	}
 	// O mesmo candidato em outra categoria é outro voto.
-	if err := s.CastVote(ctx, match, ana, "worst_player", bia); err != nil {
+	if err := s.CastVote(ctx, match, ana, "worst_player", bia, nil); err != nil {
 		t.Fatal(err)
 	}
 }
 
-// O limite de 2 votos por categoria não está no banco: ele é responsabilidade
-// de quem chama CastVote. Este teste registra esse comportamento atual.
-func TestVoteLimitIsNotEnforcedByStore(t *testing.T) {
+// limitCheck é a parte de matches.Ballot que depende dos votos já gravados.
+func limitCheck(previous []string) error {
+	if len(previous) >= matches.MaxVotesPerCategory {
+		return matches.ErrVoteLimit
+	}
+	return nil
+}
+
+// O handler valida o limite com os votos lidos dentro do lock do eleitor:
+// envios simultâneos não passam de 2.
+func TestCastVoteLimitHoldsUnderConcurrency(t *testing.T) {
 	s := newTestStore(t, "votes_test")
 	ctx := context.Background()
 	ana := voteTestUser(t, s, "Ana")
-	others := []string{voteTestUser(t, s, "Bia"), voteTestUser(t, s, "Caio"), voteTestUser(t, s, "Davi")}
+	others := []string{voteTestUser(t, s, "Bia"), voteTestUser(t, s, "Caio"), voteTestUser(t, s, "Davi"), voteTestUser(t, s, "Edu")}
 	match := voteTestMatch(t, s, ana, append([]string{ana}, others...)...)
 
-	for _, candidate := range others {
-		if err := s.CastVote(ctx, match, ana, "top_scorer", candidate); err != nil {
+	for round := range 10 {
+		if _, err := s.pool.Exec(ctx, `delete from votes where match_id = $1`, match); err != nil {
 			t.Fatal(err)
 		}
+		errs := make(chan error, len(others))
+		var wg sync.WaitGroup
+		for _, candidate := range others {
+			wg.Go(func() { errs <- s.CastVote(ctx, match, ana, "top_scorer", candidate, limitCheck) })
+		}
+		wg.Wait()
+		close(errs)
+		rejected := 0
+		for err := range errs {
+			switch {
+			case errors.Is(err, matches.ErrVoteLimit):
+				rejected++
+			case err != nil:
+				t.Fatal(err)
+			}
+		}
+		votes, err := s.MyVotes(ctx, match, ana)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(votes["top_scorer"]) != 2 || rejected != 2 {
+			t.Fatalf("rodada %d: %d votos gravados e %d recusados, want 2 e 2", round, len(votes["top_scorer"]), rejected)
+		}
+	}
+}
+
+// Trocar um voto com 2 já gravados é uma operação só (FUT-003).
+func TestReplaceVotesSwapsWithinTheLimit(t *testing.T) {
+	s := newTestStore(t, "votes_test")
+	ctx := context.Background()
+	ana, bia, caio, davi := voteTestUser(t, s, "Ana"), voteTestUser(t, s, "Bia"), voteTestUser(t, s, "Caio"), voteTestUser(t, s, "Davi")
+	match := voteTestMatch(t, s, ana, ana, bia, caio, davi)
+	for _, v := range [][2]string{{"top_scorer", bia}, {"top_scorer", caio}, {"worst_player", davi}} {
+		if err := s.CastVote(ctx, match, ana, v[0], v[1], nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	err := s.ReplaceVotes(ctx, match, ana, map[matches.Category][]string{
+		matches.TopScorer: {bia, davi},
+		matches.BestGoal:  {ana},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 	votes, err := s.MyVotes(ctx, match, ana)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(votes["top_scorer"]) != 3 {
-		t.Fatalf("votos gravados = %d, want 3", len(votes["top_scorer"]))
+	// Bia continua primeiro (voto mantido, não regravado); categoria ausente
+	// no envio (worst_player) fica como estava.
+	want := map[string][]string{"top_scorer": {bia, davi}, "worst_player": {davi}, "best_goal": {ana}}
+	for category, ids := range want {
+		if !slices.Equal(votes[category], ids) {
+			t.Errorf("%s = %v, want %v", category, votes[category], ids)
+		}
+	}
+
+	// Lista vazia desfaz a categoria.
+	if err := s.ReplaceVotes(ctx, match, ana, map[matches.Category][]string{matches.TopScorer: nil}); err != nil {
+		t.Fatal(err)
+	}
+	if votes, _ = s.MyVotes(ctx, match, ana); len(votes["top_scorer"]) != 0 {
+		t.Errorf("top_scorer depois de lista vazia = %v", votes["top_scorer"])
+	}
+}
+
+func TestReplaceVotesRejectsClosedVoting(t *testing.T) {
+	s := newTestStore(t, "votes_test")
+	ctx := context.Background()
+	ana, bia := voteTestUser(t, s, "Ana"), voteTestUser(t, s, "Bia")
+	match := voteTestMatch(t, s, ana, ana, bia)
+	if _, err := s.pool.Exec(ctx, `update matches set status = 'finished' where id = $1`, match); err != nil {
+		t.Fatal(err)
+	}
+
+	err := s.ReplaceVotes(ctx, match, ana, map[matches.Category][]string{matches.TopScorer: {bia}})
+	if !errors.Is(err, matches.ErrVotingClosed) {
+		t.Fatalf("err = %v, want ErrVotingClosed", err)
+	}
+	if votes, _ := s.MyVotes(ctx, match, ana); len(votes) != 0 {
+		t.Errorf("votos gravados com a votação fechada: %v", votes)
 	}
 }
 
@@ -95,7 +179,7 @@ func TestMyVotesKeepsOrderAndRemoveVoteUndoes(t *testing.T) {
 	match := voteTestMatch(t, s, ana, ana, bia, caio)
 
 	for _, candidate := range []string{caio, bia} {
-		if err := s.CastVote(ctx, match, ana, "top_scorer", candidate); err != nil {
+		if err := s.CastVote(ctx, match, ana, "top_scorer", candidate, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -129,9 +213,9 @@ func TestVoteResultsTieReturnsEveryWinnerByName(t *testing.T) {
 	ana, bia, caio, davi := voteTestUser(t, s, "Ana"), voteTestUser(t, s, "Bia"), voteTestUser(t, s, "Caio"), voteTestUser(t, s, "Davi")
 	match := voteTestMatch(t, s, ana, ana, bia, caio, davi)
 
-	// Caio 2, Bia 2, Davi 1 em top_scorer; ninguém em worst_player.
+	// Caio 2, Bia 2, Davi 1 em top_scorer; ninguém nas outras categorias.
 	for _, v := range [][2]string{{ana, caio}, {davi, caio}, {ana, bia}, {caio, bia}, {bia, davi}} {
-		if err := s.CastVote(ctx, match, v[0], "top_scorer", v[1]); err != nil {
+		if err := s.CastVote(ctx, match, v[0], "top_scorer", v[1], nil); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -139,8 +223,7 @@ func TestVoteResultsTieReturnsEveryWinnerByName(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Comportamento atual: best_goal fica fora da apuração (pendência FUT-005).
-	if len(results) != 2 || results[0].Category != "top_scorer" || results[1].Category != "worst_player" {
+	if len(results) != 3 || results[0].Category != "top_scorer" || results[1].Category != "worst_player" || results[2].Category != "best_goal" {
 		t.Fatalf("categorias = %+v", results)
 	}
 	top := results[0]
@@ -157,8 +240,10 @@ func TestVoteResultsTieReturnsEveryWinnerByName(t *testing.T) {
 	if !slices.Equal(names, []string{"Bia", "Caio"}) {
 		t.Errorf("vencedores = %v, want [Bia Caio]", names)
 	}
-	if worst := results[1]; worst.VoteCount != 0 || worst.Winners == nil || len(worst.Winners) != 0 {
-		t.Errorf("categoria sem votos = %+v, want lista vazia e 0", worst)
+	for _, empty := range results[1:] {
+		if empty.VoteCount != 0 || empty.Winners == nil || len(empty.Winners) != 0 {
+			t.Errorf("categoria sem votos = %+v, want lista vazia e 0", empty)
+		}
 	}
 }
 

@@ -209,18 +209,70 @@ func (s *Server) handleVote(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
-	myVotes, err := s.store.MyVotes(r.Context(), matchID, user.ID)
+	// Os votos anteriores são lidos dentro do lock do eleitor, para que envios
+	// simultâneos não furem o limite da categoria.
+	check := func(previous []string) error {
+		ballot.PreviousVotes = previous
+		return ballot.Validate()
+	}
+	if err := s.store.CastVote(r.Context(), matchID, user.ID, string(category), body.CandidateID, check); err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// handleReplaceVotes grava o voto completo do "Enviar votos" (FUT-003): para
+// cada categoria enviada, os candidatos que devem valer. Trocar um voto vira
+// uma requisição só, sem depender da ordem entre DELETE e POST.
+func (s *Server) handleReplaceVotes(w http.ResponseWriter, r *http.Request) {
+	matchID := r.PathValue("id")
+	user := currentUser(r)
+
+	var body struct {
+		Votes map[string][]string `json:"votes"`
+	}
+	if !decodeJSON(w, r, &body) {
+		return
+	}
+	votes := make(map[matches.Category][]string, len(body.Votes))
+	for raw, candidates := range body.Votes {
+		category, err := matches.ParseCategory(raw)
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		for _, id := range candidates {
+			if _, err := uuid.Parse(id); err != nil {
+				writeError(w, http.StatusBadRequest, "candidate_id inválido")
+				return
+			}
+		}
+		votes[category] = candidates
+	}
+
+	match, err := s.store.MatchByID(r.Context(), matchID)
 	if err != nil {
 		writeStoreError(w, err)
 		return
 	}
-	ballot.PreviousVotes = myVotes[string(category)]
-	if err := ballot.Validate(); err != nil {
+	participants, err := s.store.MatchParticipants(r.Context(), matchID)
+	if err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	submission := matches.Submission{
+		MatchStatus:  match.Status,
+		VoterID:      user.ID,
+		Votes:        votes,
+		Participants: participants,
+	}
+	if err := submission.Validate(); err != nil {
 		writeStoreError(w, err)
 		return
 	}
 
-	if err := s.store.CastVote(r.Context(), matchID, user.ID, string(category), body.CandidateID); err != nil {
+	if err := s.store.ReplaceVotes(r.Context(), matchID, user.ID, votes); err != nil {
 		writeStoreError(w, err)
 		return
 	}

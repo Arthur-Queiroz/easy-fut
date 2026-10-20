@@ -272,6 +272,18 @@ func (s *Store) IsParticipant(ctx context.Context, matchID, userID string) (bool
 	return going, err
 }
 
+// MatchParticipants lista quem confirmou presença (going) na partida.
+func (s *Store) MatchParticipants(ctx context.Context, matchID string) ([]string, error) {
+	rows, err := s.pool.Query(ctx, `
+		select user_id from match_confirmations
+		where match_id = $1 and response = 'going'`, matchID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return collectIDs(rows)
+}
+
 // ReplaceTeams grava um novo sorteio, descartando o anterior.
 func (s *Store) ReplaceTeams(ctx context.Context, matchID string, teams []Team) error {
 	tx, err := s.pool.Begin(ctx)

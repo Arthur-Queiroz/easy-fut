@@ -104,6 +104,46 @@ func (b Ballot) Validate() error {
 	return nil
 }
 
+// Submission é o voto completo de um participante, como a PWA envia em
+// "Enviar votos": para cada categoria, os candidatos que devem valer. Uma
+// lista vazia desfaz os votos da categoria; uma categoria ausente fica como
+// está.
+type Submission struct {
+	MatchStatus  string
+	VoterID      string
+	Votes        map[Category][]string
+	Participants []string // quem confirmou presença (going)
+}
+
+// Validate aplica a cada candidato as regras de Ballot, como se os votos da
+// categoria fossem dados um a um na ordem enviada.
+func (s Submission) Validate() error {
+	if err := CheckVotingOpen(s.MatchStatus); err != nil {
+		return err
+	}
+	if !slices.Contains(s.Participants, s.VoterID) {
+		return ErrNotParticipant
+	}
+	for _, c := range Categories {
+		candidates := s.Votes[c]
+		for i, candidate := range candidates {
+			b := Ballot{
+				MatchStatus:     s.MatchStatus,
+				VoterID:         s.VoterID,
+				CandidateID:     candidate,
+				Category:        c,
+				VoterPlayed:     true,
+				CandidatePlayed: slices.Contains(s.Participants, candidate),
+				PreviousVotes:   candidates[:i],
+			}
+			if err := b.Validate(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 // WinnerAnnouncement é o texto do feed de atividade para cada vencedor.
 func WinnerAnnouncement(c Category, winnerName string) string {
 	return fmt.Sprintf("%s foi eleito %s da partida", winnerName, c.Label())

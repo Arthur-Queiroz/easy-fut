@@ -35,12 +35,12 @@ func TestBestGoalCategoryAccepted(t *testing.T) {
 	matchID, voterID, candA, candB := setupVoteData(t, s, "voting")
 
 	for _, cand := range []string{candA, candB} {
-		if err := s.CastVote(ctx, matchID, voterID, "best_goal", cand); err != nil {
+		if err := s.CastVote(ctx, matchID, voterID, "best_goal", cand, nil); err != nil {
 			t.Fatalf("voto best_goal recusado: %v", err)
 		}
 	}
 	// 2 votos em jogadores distintos: ok. Terceiro em outro jogador viola apenas regra do handler, não do store.
-	if err := s.CastVote(ctx, matchID, voterID, "best_goal", candA); !errors.Is(err, matches.ErrDuplicateVote) {
+	if err := s.CastVote(ctx, matchID, voterID, "best_goal", candA, nil); !errors.Is(err, matches.ErrDuplicateVote) {
 		t.Fatalf("duplicado deveria dar ErrDuplicateVote, veio %v", err)
 	}
 }
@@ -59,7 +59,7 @@ func TestVoteTallyByMatchFull(t *testing.T) {
 		{voterA, "top_scorer", candA}, {voterB, "top_scorer", candA},
 		{voterA, "worst_player", candB}, {voterA, "best_goal", candA},
 	} {
-		if err := s.CastVote(ctx, matchID, v.voter, v.cat, v.cand); err != nil {
+		if err := s.CastVote(ctx, matchID, v.voter, v.cat, v.cand, nil); err != nil {
 			t.Fatalf("CastVote %s→%s falhou: %v", v.voter, v.cat, err)
 		}
 	}
@@ -86,8 +86,8 @@ func TestVotesFlatAndUserHistory(t *testing.T) {
 	s := votingTestStore(t)
 	ctx := context.Background()
 	matchID, voterID, candA, _ := setupVoteData(t, s, "voting")
-	_ = s.CastVote(ctx, matchID, voterID, "top_scorer", candA)
-	_ = s.CastVote(ctx, matchID, voterID, "best_goal", candA)
+	_ = s.CastVote(ctx, matchID, voterID, "top_scorer", candA, nil)
+	_ = s.CastVote(ctx, matchID, voterID, "best_goal", candA, nil)
 
 	// flat sem filtro
 	flat, err := s.MatchesVotesFlat(ctx, matchID, "")
@@ -116,7 +116,7 @@ func TestVotesFlatAndUserHistory(t *testing.T) {
 	if _, err := s.pool.Exec(ctx, `insert into match_confirmations (match_id, user_id, response) values ($1,$2,'going')`, match2, voterID); err != nil {
 		t.Fatal(err)
 	}
-	_ = s.CastVote(ctx, match2, voterID, "worst_player", candA)
+	_ = s.CastVote(ctx, match2, voterID, "worst_player", candA, nil)
 	hist, err := s.UserVoteHistory(ctx, voterID)
 	if err != nil {
 		t.Fatal(err)
@@ -133,7 +133,7 @@ func TestMatchesVoteSummary(t *testing.T) {
 	s := votingTestStore(t)
 	ctx := context.Background()
 	matchID, voterID, candA, _ := setupVoteData(t, s, "voting")
-	_ = s.CastVote(ctx, matchID, voterID, "top_scorer", candA)
+	_ = s.CastVote(ctx, matchID, voterID, "top_scorer", candA, nil)
 
 	out, err := s.MatchesVoteSummary(ctx, "", "")
 	if err != nil {

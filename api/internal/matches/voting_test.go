@@ -104,3 +104,45 @@ func TestWinnerAnnouncement(t *testing.T) {
 		}
 	}
 }
+
+// validSubmission é um envio completo que passa em todas as regras.
+func validSubmission() Submission {
+	return Submission{
+		MatchStatus:  StatusVoting,
+		VoterID:      ana,
+		Participants: []string{ana, bia, cai, dav},
+		Votes: map[Category][]string{
+			TopScorer:   {bia, cai},
+			WorstPlayer: {dav},
+		},
+	}
+}
+
+func TestSubmissionValidate(t *testing.T) {
+	cases := []struct {
+		name   string
+		change func(*Submission)
+		want   error
+	}{
+		{"envio válido", func(*Submission) {}, nil},
+		{"lista vazia desfaz a categoria", func(s *Submission) { s.Votes[TopScorer] = nil }, nil},
+		{"nada enviado", func(s *Submission) { s.Votes = nil }, nil},
+		{"votação fechada", func(s *Submission) { s.MatchStatus = StatusFinished }, ErrVotingClosed},
+		{"votação fechada mesmo sem votos", func(s *Submission) { s.MatchStatus, s.Votes = StatusFinished, nil }, ErrVotingClosed},
+		{"eleitor não jogou", func(s *Submission) { s.Participants = []string{bia, cai, dav} }, ErrNotParticipant},
+		{"candidato não jogou", func(s *Submission) { s.Participants = []string{ana, bia, dav} }, ErrNotParticipant},
+		{"três na mesma categoria", func(s *Submission) { s.Votes[BestGoal] = []string{bia, cai, dav} }, ErrVoteLimit},
+		{"mesmo jogador duas vezes", func(s *Submission) { s.Votes[TopScorer] = []string{bia, bia} }, ErrDuplicateVote},
+		{"perna de pau em si mesmo", func(s *Submission) { s.Votes[WorstPlayer] = []string{ana} }, ErrSelfWorstVote},
+		{"melhor gol em si mesmo vale", func(s *Submission) { s.Votes[BestGoal] = []string{ana, bia} }, nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := validSubmission()
+			tc.change(&s)
+			if err := s.Validate(); !errors.Is(err, tc.want) {
+				t.Fatalf("Validate() = %v, want %v", err, tc.want)
+			}
+		})
+	}
+}
