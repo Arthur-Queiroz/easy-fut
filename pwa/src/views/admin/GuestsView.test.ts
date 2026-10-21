@@ -105,7 +105,7 @@ describe('admin avulsos', () => {
     await button(row, 'Reenviar confirmação')!.trigger('click')
     await flushPromises()
     expect(mocks.post).toHaveBeenCalledWith('/admin/guest-bookings/b1/resend', { kind: 'confirmation' })
-    expect(rows(w)[0].text()).toContain('Confirmação reenviada')
+    expect(rows(w)[0].text()).toContain('Confirmação agendada. O envio pode levar até 5 minutos.')
 
     await button(rows(w)[0], 'Reenviar link de voto')!.trigger('click')
     expect(mocks.post).toHaveBeenCalledTimes(1)
@@ -113,6 +113,7 @@ describe('admin avulsos', () => {
     await button(w, 'Enviar link novo')!.trigger('click')
     await flushPromises()
     expect(mocks.post).toHaveBeenLastCalledWith('/admin/guest-bookings/b1/resend', { kind: 'vote_link' })
+    expect(rows(w)[0].text()).toContain('Novo link de voto agendado')
     w.unmount()
   })
 
