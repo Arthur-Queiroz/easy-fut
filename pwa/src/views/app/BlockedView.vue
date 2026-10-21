@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { api, errorMessage } from '../../api/client'
 import type { Charge } from '../../api/types'
 import { useAuthStore } from '../../stores/auth'
+import { payableCents } from '../../lib/charges'
 import { formatCents, formatMonth } from '../../lib/format'
 import { safeUrl } from '../../lib/security'
 import NavIcon from '../../components/layout/NavIcon.vue'
@@ -31,7 +32,7 @@ async function loadCharges() {
   charges.value = (data ?? []).filter((c) => c.status === 'overdue' || c.status === 'pending')
 }
 
-const totalDue = computed(() => charges.value.reduce((sum, c) => sum + c.amount_cents, 0))
+const totalDue = computed(() => charges.value.reduce((sum, c) => sum + payableCents(c), 0))
 const hasPix = computed(() => charges.value.some((c) => c.pix_payload))
 
 function chargeTitle(charge: Charge) {
@@ -109,7 +110,7 @@ async function logout() {
       <div v-for="charge in charges" :key="charge.id" class="mt-3 border-b border-white/10 pb-3.5 last:border-b-0">
         <div class="flex justify-between text-[13.5px] text-white/70">
           <span>{{ chargeTitle(charge) }}</span>
-          <span class="font-semibold text-white">{{ formatCents(charge.amount_cents) }}</span>
+          <span class="font-semibold text-white">{{ formatCents(payableCents(charge)) }}</span>
         </div>
 
         <template v-if="charge.pix_payload">

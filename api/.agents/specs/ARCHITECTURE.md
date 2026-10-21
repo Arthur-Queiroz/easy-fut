@@ -5,6 +5,7 @@ cmd/api/            servidor: config → store.New → Migrate → seedAdmin →
 cmd/vapid/          gera o par de chaves VAPID
 internal/
   api/              rotas (server.go), middlewares e handlers HTTP
+  billing/          domínio das cobranças (hoje: taxa do Pix repassada)
   auth/             hash de senha, JWT de sessão, rate limit de login
   busdays/          prazos em dias úteis (seg–sex, sem feriados)
   config/           configuração por variáveis de ambiente
@@ -51,9 +52,9 @@ camada.
 - Integrações externas ficam atrás de um tipo próprio (`notify.Sender`,
   `push`, `mercadopago`, `mailer`) para os testes não falarem com a rede.
 
-Migração em andamento: a votação já está em `matches`. As demais regras
-(cobranças, inadimplência, transições de partida, convites) ainda estão nos
-handlers e no SQL. Ao mexer numa delas, prefira migrá-la seguindo o ADR.
+Migração em andamento: a votação já está em `matches` e a taxa do Pix em
+`billing`. As demais regras (rateio, inadimplência, transições de partida,
+convites) ainda estão nos handlers e no SQL. Ao mexer numa delas, prefira migrá-la seguindo o ADR.
 
 Não introduza ORM, `sqlc`, injeção de dependência ou repositórios genéricos
 sem aprovação.

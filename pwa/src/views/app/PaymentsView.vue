@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { api, errorMessage } from '../../api/client'
 import type { Charge } from '../../api/types'
 import { formatCents, formatDateShort, formatDMY, formatMonth } from '../../lib/format'
+import { paidCents, payableCents } from '../../lib/charges'
 import { safeUrl } from '../../lib/security'
 import MobileShell from '../../components/layout/MobileShell.vue'
 import NavIcon from '../../components/layout/NavIcon.vue'
@@ -114,7 +115,7 @@ function statusBadge(charge: Charge): { tone: 'success' | 'warn' | 'danger' | 'n
                 <span v-else class="px-2 text-[11px] leading-snug text-[#8CA094]">QR Code disponível após gerar o Pix</span>
               </div>
               <div class="flex flex-1 flex-col gap-1 lg:gap-1.5">
-                <div class="font-condensed text-[34px] font-bold leading-none lg:text-[42px]">{{ formatCents(charge.amount_cents) }}</div>
+                <div class="font-condensed text-[34px] font-bold leading-none lg:text-[42px]">{{ formatCents(payableCents(charge)) }}</div>
                 <div class="text-[13px] text-ink2 lg:text-[13.5px]">
                   Vence <strong :class="charge.status === 'overdue' ? 'text-danger' : 'text-warn'">{{ formatDateShort(charge.due_date) }}</strong>
                   <template v-if="charge.batch_kind === 'monthly'"><br />5º dia útil após a geração</template>
@@ -190,7 +191,7 @@ function statusBadge(charge: Charge): { tone: 'success' | 'warn' | 'danger' | 'n
                   <template v-else>{{ statusBadge(charge).label }}</template>
                 </div>
               </div>
-              <span class="text-sm font-semibold text-ink2">{{ formatCents(charge.amount_cents) }}</span>
+              <span class="text-sm font-semibold text-ink2" data-test="history-amount">{{ formatCents(paidCents(charge)) }}</span>
             </div>
             <p v-if="history.length === 0" class="pt-2 text-sm text-ink3">Nenhum pagamento anterior.</p>
           </div>

@@ -111,7 +111,9 @@ export interface Charge {
   batch_kind: 'monthly' | 'match'
   batch_title: string
   reference_month: string
-  amount_cents: number
+  amount_cents: number // rateio
+  pix_fee_cents: number // taxa do Pix repassada (0 em cobranças antigas)
+  pix_total_cents: number // o que o jogador paga no Pix
   status: ChargeStatus
   due_date: string
   paid_at?: string
@@ -130,6 +132,8 @@ export interface ChargeBatch {
   total_amount_cents: number
   user_count: number
   individual_amount_cents: number
+  pix_fee_bps: number // taxa congelada no lote; 99 = 0,99%
+  pix_fee_cents: number // taxa por pessoa no Pix
   due_date: string
   generated_by_name: string
   created_at: string

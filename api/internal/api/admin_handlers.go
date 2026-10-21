@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"futdarapaziada/api/internal/billing"
 	"futdarapaziada/api/internal/notify"
 	"futdarapaziada/api/internal/store"
 )
@@ -195,9 +196,23 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, settings)
 }
 
+// validateSettings recusa valores que as regras não conseguiriam ler depois.
+func validateSettings(settings map[string]string) error {
+	if raw, ok := settings["pix_fee_bps"]; ok {
+		if _, err := billing.ParseBasisPoints(raw); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *Server) handleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 	var body map[string]string
 	if !decodeJSON(w, r, &body) {
+		return
+	}
+	if err := validateSettings(body); err != nil {
+		writeStoreError(w, err)
 		return
 	}
 	for key, value := range body {

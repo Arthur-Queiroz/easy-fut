@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"futdarapaziada/api/internal/billing"
 	"futdarapaziada/api/internal/matches"
 )
 
@@ -37,5 +38,18 @@ func TestWriteStoreErrorVotingContract(t *testing.T) {
 	}
 	if got := matches.ErrVoteLimit.Error(); got != "você já usou seus 2 votos nesta categoria" {
 		t.Errorf("mensagem do limite mudou: %q", got)
+	}
+}
+
+func TestWriteStoreErrorBillingContract(t *testing.T) {
+	rec := httptest.NewRecorder()
+	writeStoreError(rec, billing.ErrInvalidFeeRate)
+
+	var body apiError
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	if rec.Code != http.StatusBadRequest || body.Error != billing.ErrInvalidFeeRate.Error() {
+		t.Errorf("ErrInvalidFeeRate: %d %q, want 400 com a mensagem do domínio", rec.Code, body.Error)
 	}
 }
