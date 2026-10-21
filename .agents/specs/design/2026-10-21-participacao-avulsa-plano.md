@@ -122,6 +122,54 @@ Comportamento da criação de inscrição (`POST /api/public/guest-bookings`):
   reservas para `cancelled`.
 - **Selo "Avulso":** confirmações e times passam a expor `kind` do usuário.
 
+### Formatos JSON adicionais (fixados em 2026-10-21, antes da fase 2)
+
+- **`Match` (todas as respostas que já devolvem partida)** ganha:
+  - `guest_sale_open`, `guest_slots`, `guest_price_cents`, `guest_total_cents`;
+  - `guest_confirmed_count` (inscrições confirmadas);
+  - `guest_pending_count` (`reserved` + `pending_payment`).
+- **`ConfirmationEntry` e membros de time** ganham `kind` (`member` ou
+  `guest`), usado no selo "Avulso". O `User` já ganhou `kind` na fase F.
+- **Inscrição na lista do admin** (`GET /api/admin/guest-bookings`, array):
+
+  ```json
+  {"id", "match_id", "match_date", "start_time", "venue", "name", "phone",
+   "email", "status", "base_cents", "total_cents", "created_at",
+   "confirmed_at", "refund_reason",
+   "confirmation_sent_at", "vote_link_sent_at"}
+  ```
+
+  Os dois últimos ficam nulos até o primeiro envio. A lista vem ordenada
+  por `created_at` decrescente.
+- **Caixa** (`GET /api/admin/cash`):
+
+  ```json
+  {"balance_cents",
+   "entries": [{"id", "kind", "amount_cents", "fee_cents", "booking_id",
+                "description", "occurred_on", "created_at"}]}
+  ```
+
+  `amount_cents` é sempre positivo; o sinal vem de `kind`.
+- **Reenvio:** `POST /api/admin/guest-bookings/{id}/resend` `{kind:
+  "confirmation" | "vote_link"}` é da fase C. O link de voto reenviado gira
+  o token: o antigo deixa de valer.
+- **Configuração:** `guest_price_cents` é validada como inteiro de 100 a
+  100000 em `PUT /admin/settings` (fase B).
+
+### Rotas da PWA
+
+| Rota | Tela | Fase |
+| --- | --- | --- |
+| `/avulso` | partidas com venda aberta e formulário de inscrição (pública) | D |
+| `/avulso/inscricao/:id` | acompanhamento do Pix e status (pública; token da inscrição no `localStorage`) | D |
+| `/votar/:token` | votação do avulso (pública) | D |
+| `/admin/avulsos` | inscrições avulsas | E |
+| `/admin/caixa` | caixa do grupo | E |
+
+Para não conflitar, os tipos da fase D ficam em `pwa/src/api/publicGuests.ts`
+e os da fase E em `pwa/src/api/adminGuests.ts`. Só a fase E altera
+`pwa/src/api/types.ts`.
+
 ### Isolamento dos membros
 
 Toda consulta que fala do grupo passa a exigir `kind = 'member'`:
