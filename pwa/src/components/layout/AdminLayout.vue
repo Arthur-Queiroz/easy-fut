@@ -15,6 +15,8 @@ const items = [
   { label: 'Partidas', to: '/admin/partidas', icon: 'ball' },
   { label: 'Usuários', to: '/admin/usuarios', icon: 'users' },
   { label: 'Mensalidades', to: '/admin/mensalidades', icon: 'pix' },
+  { label: 'Avulsos', to: '/admin/avulsos', icon: 'ticket' },
+  { label: 'Caixa', to: '/admin/caixa', icon: 'wallet' },
   { label: 'Convites', to: '/admin/convites', icon: 'chat' },
   { label: 'Recorrências', to: '/admin/recorrencias', icon: 'grid' },
   { label: 'Votos', to: '/admin/votos', icon: 'trophy' },

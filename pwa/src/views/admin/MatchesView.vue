@@ -5,6 +5,7 @@ import type { Match, Team } from '../../api/types'
 import { dayOfMonth, formatDateShort, formatHour, formatTimestamp, monthShort } from '../../lib/format'
 import AdminLayout from '../../components/layout/AdminLayout.vue'
 import DrawTeamsModal from '../../components/admin/DrawTeamsModal.vue'
+import GuestSaleControl from '../../components/admin/GuestSaleControl.vue'
 import NavIcon from '../../components/layout/NavIcon.vue'
 import Avatar from '../../components/ui/Avatar.vue'
 import Badge from '../../components/ui/Badge.vue'
@@ -147,6 +148,10 @@ async function confirmCancel() {
   }
 }
 
+function guestCount(team: Team): number {
+  return team.members.filter((m) => m.kind === 'guest').length
+}
+
 function statusBadge(match: Match): { tone: 'success' | 'warn' | 'danger' | 'info' | 'neutral'; label: string } {
   switch (match.status) {
     case 'open':
@@ -203,12 +208,16 @@ function statusBadge(match: Match): { tone: 'success' | 'warn' | 'danger' | 'inf
               <Badge :tone="statusBadge(match).tone" dot>{{ statusBadge(match).label }}</Badge>
             </div>
 
+            <GuestSaleControl :match="match" @changed="load" />
+
             <div v-if="teams[match.id]?.length" class="mt-3 flex flex-wrap gap-4 rounded-xl bg-bg p-3">
               <div v-for="team in teams[match.id]" :key="team.id" class="min-w-[200px] flex-1">
                 <div class="mb-1.5 flex items-center gap-2">
                   <span class="h-3 w-3 rounded-full" :style="{ backgroundColor: team.team_color }" />
                   <span class="font-condensed text-[13px] font-bold tracking-[.06em]">{{ team.team_name.toUpperCase() }}</span>
-                  <span class="text-[11.5px] text-ink3">{{ team.members.length }} jogadores</span>
+                  <span class="text-[11.5px] text-ink3">
+                    {{ team.members.length }} jogadores<template v-if="guestCount(team)"> · {{ guestCount(team) }} avulso{{ guestCount(team) > 1 ? 's' : '' }}</template>
+                  </span>
                 </div>
                 <div class="flex flex-wrap gap-1.5">
                   <div v-for="member in team.members" :key="member.user_id" class="flex items-center gap-1.5">
@@ -268,7 +277,7 @@ function statusBadge(match: Match): { tone: 'success' | 'warn' | 'danger' | 'inf
                   <td class="px-5 py-2.5 text-[13px] font-semibold">{{ formatDateShort(match.match_date) }}</td>
                   <td class="px-3 py-2.5 text-[13px] text-ink2">{{ match.venue }}</td>
                   <td class="px-3 py-2.5 text-[13px] text-ink2">
-                    {{ match.going_count }}<span v-if="match.media_count" class="text-ink3"> · {{ match.media_count }} mídias</span>
+                    {{ match.going_count }}<span v-if="match.guest_confirmed_count"> ({{ match.guest_confirmed_count }} avulsos)</span><span v-if="match.media_count" class="text-ink3"> · {{ match.media_count }} mídias</span>
                   </td>
                   <td class="px-3 py-2.5">
                     <Badge :tone="statusBadge(match).tone">{{ statusBadge(match).label }}</Badge>

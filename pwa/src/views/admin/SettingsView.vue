@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { api, errorMessage } from '../../api/client'
 import { feePercentToBasisPoints, formatBasisPoints } from '../../lib/charges'
+import { centsToReaisInput, reaisInputToCents } from '../../lib/guests'
 import AdminLayout from '../../components/layout/AdminLayout.vue'
 import BaseButton from '../../components/ui/BaseButton.vue'
 import Card from '../../components/ui/Card.vue'
@@ -16,6 +17,9 @@ const saving = ref(false)
 const pixFeeInput = ref('')
 const pixFeeBps = computed(() => feePercentToBasisPoints(pixFeeInput.value))
 
+// A API guarda guest_price_cents (2500) e valida de 100 a 100000; o admin edita em reais (25,00).
+const guestPriceInput = ref('')
+
 // Ficam aqui e não no template porque as chaves duplas colidem com a
 // interpolação do Vue.
 const templateVars = ['{{nome}}', '{{mes_referencia}}', '{{valor}}', '{{data_vencimento}}', '{{codigo_pix}}']
@@ -24,6 +28,7 @@ onMounted(async () => {
   const { data } = await api.get<Record<string, string>>('/admin/settings')
   settings.value = data
   pixFeeInput.value = formatBasisPoints(data.pix_fee_bps)
+  guestPriceInput.value = centsToReaisInput(data.guest_price_cents)
 })
 
 async function save() {
@@ -32,9 +37,11 @@ async function save() {
   try {
     const body = { ...settings.value }
     if (pixFeeInput.value.trim() !== '') body.pix_fee_bps = pixFeeBps.value
+    if (guestPriceInput.value.trim() !== '') body.guest_price_cents = reaisInputToCents(guestPriceInput.value)
     const { data } = await api.put<Record<string, string>>('/admin/settings', body)
     settings.value = data
     pixFeeInput.value = formatBasisPoints(data.pix_fee_bps)
+    guestPriceInput.value = centsToReaisInput(data.guest_price_cents)
     saved.value = true
     setTimeout(() => (saved.value = false), 2500)
   } catch (e) {
@@ -78,6 +85,27 @@ async function save() {
                 <code>{{ variable }}</code><span v-if="i < templateVars.length - 1">, </span>
               </template>.
               O envio é agendado para um dia útil antes do vencimento.
+            </span>
+          </label>
+        </div>
+      </Card>
+
+      <Card class="px-5 py-[18px]">
+        <SectionLabel>Participação avulsa</SectionLabel>
+        <div class="mt-3 flex flex-col gap-4">
+          <label class="flex flex-col gap-1.5">
+            <span class="text-[13px] font-semibold text-ink2">Valor da vaga avulsa (R$)</span>
+            <input
+              v-model="guestPriceInput"
+              inputmode="decimal"
+              placeholder="25,00"
+              class="field max-w-[160px]"
+              aria-label="Valor da vaga avulsa (R$)"
+            />
+            <span class="text-[11.5px] leading-relaxed text-ink3">
+              Valor que vai para o caixa, de R$ 1,00 a R$ 1.000,00. A taxa do Pix é embutida no total que o avulso paga.
+              O valor fica congelado em cada partida quando você abre a venda: mudar aqui só vale para as próximas
+              aberturas.
             </span>
           </label>
         </div>

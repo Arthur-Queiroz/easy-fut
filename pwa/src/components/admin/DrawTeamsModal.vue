@@ -4,6 +4,7 @@ import { api, errorMessage } from '../../api/client'
 import type { ConfirmationEntry, Match, Team, TeamPreset } from '../../api/types'
 import { safeColor } from '../../lib/security'
 import Avatar from '../ui/Avatar.vue'
+import Badge from '../ui/Badge.vue'
 import BaseButton from '../ui/BaseButton.vue'
 import Modal from '../ui/Modal.vue'
 import SectionLabel from '../ui/SectionLabel.vue'
@@ -238,6 +239,7 @@ async function submit() {
           <div v-for="player in going" :key="player.user_id" class="flex items-center gap-2">
             <Avatar :name="player.name" :color="player.avatar_color" size="xs" />
             <span class="min-w-0 flex-1 truncate text-[13px] font-medium">{{ player.name }}</span>
+            <Badge v-if="player.kind === 'guest'" tone="info">Avulso</Badge>
             <select v-model.number="assignment[player.user_id]" class="field !h-9 !px-2 text-[12px]">
               <option :value="-1">Sem time</option>
               <option v-for="t in teamCount" :key="t" :value="t - 1">{{ teamLabel(t - 1) }}</option>
@@ -259,7 +261,7 @@ async function submit() {
           <span class="mt-1 h-3 w-3 shrink-0 rounded-full" :style="{ backgroundColor: safeColor(team.team_color) }" />
           <div class="min-w-0">
             <div class="font-condensed text-[13px] font-bold tracking-[.06em]">{{ team.team_name.toUpperCase() }}</div>
-            <div class="text-[12px] text-ink2">{{ team.members.map((m) => m.name).join(', ') }}</div>
+            <div class="text-[12px] text-ink2">{{ team.members.map((m) => (m.kind === 'guest' ? `${m.name} (avulso)` : m.name)).join(', ') }}</div>
           </div>
         </div>
       </div>
