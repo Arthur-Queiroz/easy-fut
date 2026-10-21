@@ -9,6 +9,7 @@ import { safeColor, safeUrl, validateMediaFile } from '../lib/security'
 import type { VoteCategory } from '../api/types'
 import NavIcon from './layout/NavIcon.vue'
 import Avatar from './ui/Avatar.vue'
+import Badge from './ui/Badge.vue'
 import Card from './ui/Card.vue'
 import SectionLabel from './ui/SectionLabel.vue'
 
@@ -311,6 +312,7 @@ function resultFor(category: string) {
               <span class="flex-1 text-sm" :class="marks[cat.key].includes(player.user_id) ? 'font-semibold' : 'font-medium'">
                 {{ player.user_id === auth.user?.id ? 'Você' : player.name }}
               </span>
+              <Badge v-if="player.kind === 'guest'" tone="info">Avulso</Badge>
               <span
                 v-if="marks[cat.key].includes(player.user_id)"
                 class="flex h-5 w-5 items-center justify-center rounded-full"
@@ -354,9 +356,10 @@ function resultFor(category: string) {
           <span class="font-condensed text-[15px] font-bold text-brand">{{ participants.length }}</span>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <div v-for="player in participants" :key="player.user_id" class="flex items-center gap-2">
+          <div v-for="player in participants" :key="player.user_id" class="flex min-w-0 items-center gap-2">
             <Avatar :name="player.name" :color="player.avatar_color" size="xs" />
             <span class="truncate text-[13px] font-medium">{{ player.name }}</span>
+            <Badge v-if="player.kind === 'guest'" tone="info">Avulso</Badge>
           </div>
         </div>
       </Card>
@@ -370,8 +373,10 @@ function resultFor(category: string) {
               <span class="h-3.5 w-3.5 rounded-full" :style="{ backgroundColor: safeColor(team.team_color) }" />
               <span class="font-condensed text-sm font-bold tracking-[.06em]">{{ team.team_name.toUpperCase() }}</span>
             </div>
-            <div class="text-[13px] leading-relaxed text-ink2">
-              {{ team.members.map((m) => m.name.split(' ')[0]).join(', ') }}
+            <div class="flex flex-wrap items-center gap-x-1 gap-y-1 text-[13px] leading-relaxed text-ink2">
+              <span v-for="(m, i) in team.members" :key="m.user_id" class="inline-flex items-center gap-1">
+                {{ m.name.split(' ')[0] }}<Badge v-if="m.kind === 'guest'" tone="info">Avulso</Badge><template v-if="i < team.members.length - 1">,</template>
+              </span>
             </div>
           </div>
         </div>

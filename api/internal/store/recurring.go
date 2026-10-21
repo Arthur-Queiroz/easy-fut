@@ -149,7 +149,7 @@ func (s *Store) DeleteRecurringMatch(ctx context.Context, id string) error {
 // Dia e horário do template são de São Paulo; a sessão do PostgreSQL está em
 // UTC, então toda conversão de data/hora diz o fuso explicitamente.
 //
-// Na mesma transação, os usuários ativos ganham a confirmação no_response em
+// Na mesma transação, os membros ativos ganham a confirmação no_response em
 // toda partida recorrente aberta, como em CreateMatch: é dela que saem o
 // lembrete por push e a lista "sem resposta". Rodando todo dia, isso também
 // alcança quem virou ativo depois que a partida foi gerada. O push de
@@ -197,7 +197,7 @@ func (s *Store) MaterializeRecurringMatches(ctx context.Context, ahead int) (int
 	if _, err := tx.Exec(ctx, `
 		insert into match_confirmations (match_id, user_id)
 		select m.id, u.id
-		from matches m join users u on u.status = 'active'
+		from matches m join users u on u.status = 'active' and u.kind = 'member'
 		where m.recurring_id is not null and m.status = 'open'
 		on conflict (match_id, user_id) do nothing`); err != nil {
 		return 0, err

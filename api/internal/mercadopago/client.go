@@ -41,6 +41,13 @@ func New(accessToken string) *Client {
 	return newClient(accessToken, ordersURL, &http.Client{Timeout: 15 * time.Second})
 }
 
+// NewWithOrdersURL aponta o cliente para outra URL da Orders API. Existe só
+// para testes de outros pacotes (handlers e webhook) usarem um servidor
+// httptest no lugar do Mercado Pago real; a aplicação usa New.
+func NewWithOrdersURL(accessToken, ordersURL string, httpClient *http.Client) *Client {
+	return newClient(accessToken, ordersURL, httpClient)
+}
+
 func newClient(accessToken, ordersURL string, httpClient *http.Client) *Client {
 	return &Client{
 		accessToken: strings.TrimSpace(accessToken),

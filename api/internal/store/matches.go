@@ -15,14 +15,19 @@ const matchColumns = `
 	(select count(*) from match_confirmations c where c.match_id = m.id and c.response = 'going'),
 	(select count(*) from match_confirmations c where c.match_id = m.id and c.response = 'not_going'),
 	(select count(*) from match_confirmations c where c.match_id = m.id and c.response = 'no_response'),
-	(select count(*) from match_media md where md.match_id = m.id and md.status = 'visible')`
+	(select count(*) from match_media md where md.match_id = m.id and md.status = 'visible'),
+	m.guest_sale_open, m.guest_slots, m.guest_price_cents, m.guest_total_cents,
+	(select count(*) from guest_bookings g where g.match_id = m.id and g.status = 'confirmed'),
+	(select count(*) from guest_bookings g where g.match_id = m.id and g.status in ('reserved', 'pending_payment'))`
 
 func scanMatch(row pgx.Row) (Match, error) {
 	var m Match
 	err := row.Scan(&m.ID, &m.MatchDate, &m.StartTime, &m.EndTime, &m.Venue, &m.Address,
 		&m.ConfirmationDeadline, &m.Status, &m.CancelReason, &m.Notes,
 		&m.VotingClosesAt, &m.FinishedAt, &m.CreatedAt,
-		&m.GoingCount, &m.NotGoingCount, &m.NoResponseCount, &m.MediaCount)
+		&m.GoingCount, &m.NotGoingCount, &m.NoResponseCount, &m.MediaCount,
+		&m.GuestSaleOpen, &m.GuestSlots, &m.GuestPriceCents, &m.GuestTotalCents,
+		&m.GuestConfirmedCount, &m.GuestPendingCount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return m, ErrNotFound
 	}
@@ -40,7 +45,7 @@ type MatchInput struct {
 }
 
 // CreateMatch cria a partida com confirmação aberta e uma linha de confirmação
-// "sem resposta" para cada usuário ativo.
+// "sem resposta" para cada membro ativo (avulsos entram só ao pagar a vaga).
 func (s *Store) CreateMatch(ctx context.Context, in MatchInput, createdBy string) (Match, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -58,13 +63,13 @@ func (s *Store) CreateMatch(ctx context.Context, in MatchInput, createdBy string
 	}
 	_, err = tx.Exec(ctx, `
 		insert into match_confirmations (match_id, user_id)
-		select $1, id from users where status = 'active'`, id)
+		select $1, id from users where status = 'active' and kind = 'member'`, id)
 	if err != nil {
 		return Match{}, err
 	}
 	// Queue inside the transaction so a failed creation can never send a push.
 	_, err = tx.Exec(ctx, `insert into match_push_deliveries(subscription_id,match_id,kind)
- select p.id,$1,'created' from push_subscriptions p join users u on u.id=p.user_id where u.status='active'`, id)
+ select p.id,$1,'created' from push_subscriptions p join users u on u.id=p.user_id where u.status='active' and u.kind='member'`, id)
 	if err != nil {
 		return Match{}, err
 	}
@@ -153,8 +158,16 @@ func (s *Store) SetMatchStatus(ctx context.Context, id, newStatus string, allowe
 	return nil
 }
 
+// CancelMatch cancela a partida e, na mesma transação, resolve as inscrições
+// avulsas: quem pagou vai para reembolso, reservas são canceladas.
 func (s *Store) CancelMatch(ctx context.Context, id, reason string) error {
-	tag, err := s.pool.Exec(ctx, `
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	tag, err := tx.Exec(ctx, `
 		update matches set status = 'cancelled', cancel_reason = $2
 		where id = $1 and status not in ('finished', 'cancelled')`, id, reason)
 	if err != nil {
@@ -163,7 +176,10 @@ func (s *Store) CancelMatch(ctx context.Context, id, reason string) error {
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	return nil
+	if err := settleGuestBookingsOnCancel(ctx, tx, id); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 // FinishMatch encerra a partida e abre a votação até votingCloses.
@@ -243,7 +259,7 @@ func (s *Store) Confirm(ctx context.Context, matchID, userID, response string) e
 
 func (s *Store) Confirmations(ctx context.Context, matchID string) ([]ConfirmationEntry, error) {
 	rows, err := s.pool.Query(ctx, `
-		select c.user_id, u.name, u.avatar_color, u.role, c.response, c.responded_at
+		select c.user_id, u.name, u.avatar_color, u.role, u.kind, c.response, c.responded_at
 		from match_confirmations c
 		join users u on u.id = c.user_id
 		where c.match_id = $1
@@ -256,7 +272,7 @@ func (s *Store) Confirmations(ctx context.Context, matchID string) ([]Confirmati
 	var entries []ConfirmationEntry
 	for rows.Next() {
 		var e ConfirmationEntry
-		if err := rows.Scan(&e.UserID, &e.Name, &e.AvatarColor, &e.Role, &e.Response, &e.RespondedAt); err != nil {
+		if err := rows.Scan(&e.UserID, &e.Name, &e.AvatarColor, &e.Role, &e.Kind, &e.Response, &e.RespondedAt); err != nil {
 			return nil, err
 		}
 		entries = append(entries, e)
@@ -320,7 +336,7 @@ func (s *Store) ReplaceTeams(ctx context.Context, matchID string, teams []Team) 
 
 func (s *Store) Teams(ctx context.Context, matchID string) ([]Team, error) {
 	rows, err := s.pool.Query(ctx, `
-		select t.id, t.match_id, t.team_name, t.team_color, t.position, u.id, u.name, u.avatar_color
+		select t.id, t.match_id, t.team_name, t.team_color, t.position, u.id, u.name, u.avatar_color, u.kind
 		from match_teams t
 		join match_team_members tm on tm.team_id = t.id
 		join users u on u.id = tm.user_id
@@ -336,7 +352,7 @@ func (s *Store) Teams(ctx context.Context, matchID string) ([]Team, error) {
 	for rows.Next() {
 		var t Team
 		var m TeamMember
-		if err := rows.Scan(&t.ID, &t.MatchID, &t.TeamName, &t.TeamColor, &t.Position, &m.UserID, &m.Name, &m.AvatarColor); err != nil {
+		if err := rows.Scan(&t.ID, &t.MatchID, &t.TeamName, &t.TeamColor, &t.Position, &m.UserID, &m.Name, &m.AvatarColor, &m.Kind); err != nil {
 			return nil, err
 		}
 		i, ok := index[t.ID]

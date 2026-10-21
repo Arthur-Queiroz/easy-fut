@@ -22,10 +22,11 @@ type Runner struct {
 	cron         *cron.Cron
 	push         *push.Client
 	reminderLead time.Duration
+	appURL       string
 }
 
-func New(st *store.Store, sender notify.Sender) *Runner {
-	return &Runner{store: st, sender: sender, cron: cron.New()}
+func New(st *store.Store, sender notify.Sender, appURL string) *Runner {
+	return &Runner{store: st, sender: sender, cron: cron.New(), appURL: appURL}
 }
 
 // Start registra e inicia os jobs. Erros de agenda são bugs de código, então panic.
@@ -41,6 +42,7 @@ func (r *Runner) Start() {
 		mustAdd("* * * * *", r.sendBroadcastPush)
 	}
 	mustAdd("* * * * *", r.closeExpiredConfirmations) // a cada minuto
+	mustAdd("* * * * *", r.expireGuestBookings)
 	mustAdd("*/10 * * * *", r.closeExpiredVoting)
 	mustAdd("*/10 * * * *", r.openUnopenedVoting)     // FUT-001
 	mustAdd("15 0 * * *", r.markOverdueAndInactivate) // diário, 00h15
@@ -105,6 +107,20 @@ func (r *Runner) openUnopenedVoting() {
 				fmt.Sprintf("Votação aberta automaticamente — partida do dia %s",
 					m.MatchDate[8:10]+"/"+m.MatchDate[5:7]))
 		}
+	}
+	if _, err := r.store.ScheduleMissingGuestVoteLinks(ctx, r.appURL, time.Now()); err != nil {
+		log.Printf("job agendar links de voto dos avulsos: %v", err)
+	}
+}
+
+func (r *Runner) expireGuestBookings() {
+	ids, err := r.store.ExpireGuestBookings(context.Background(), time.Now())
+	if err != nil {
+		log.Printf("job expirar reservas avulsas: %v", err)
+		return
+	}
+	if len(ids) > 0 {
+		log.Printf("expiradas %d reservas avulsas", len(ids))
 	}
 }
 

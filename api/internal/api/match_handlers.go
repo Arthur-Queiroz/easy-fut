@@ -226,57 +226,42 @@ func (s *Server) handleVote(w http.ResponseWriter, r *http.Request) {
 // cada categoria enviada, os candidatos que devem valer. Trocar um voto vira
 // uma requisição só, sem depender da ordem entre DELETE e POST.
 func (s *Server) handleReplaceVotes(w http.ResponseWriter, r *http.Request) {
-	matchID := r.PathValue("id")
-	user := currentUser(r)
+	votes, ok := decodeVoteSubmission(w, r)
+	if !ok {
+		return
+	}
+	if err := s.replaceVotes(r.Context(), r.PathValue("id"), currentUser(r).ID, votes); err != nil {
+		writeStoreError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
 
+// decodeVoteSubmission lê {votes: {categoria: [ids]}} e valida o formato
+// (categoria conhecida, ids uuid). Responde 400 e devolve false se não der.
+func decodeVoteSubmission(w http.ResponseWriter, r *http.Request) (map[matches.Category][]string, bool) {
 	var body struct {
 		Votes map[string][]string `json:"votes"`
 	}
 	if !decodeJSON(w, r, &body) {
-		return
+		return nil, false
 	}
 	votes := make(map[matches.Category][]string, len(body.Votes))
 	for raw, candidates := range body.Votes {
 		category, err := matches.ParseCategory(raw)
 		if err != nil {
 			writeStoreError(w, err)
-			return
+			return nil, false
 		}
 		for _, id := range candidates {
 			if _, err := uuid.Parse(id); err != nil {
 				writeError(w, http.StatusBadRequest, "candidate_id inválido")
-				return
+				return nil, false
 			}
 		}
 		votes[category] = candidates
 	}
-
-	match, err := s.store.MatchByID(r.Context(), matchID)
-	if err != nil {
-		writeStoreError(w, err)
-		return
-	}
-	participants, err := s.store.MatchParticipants(r.Context(), matchID)
-	if err != nil {
-		writeStoreError(w, err)
-		return
-	}
-	submission := matches.Submission{
-		MatchStatus:  match.Status,
-		VoterID:      user.ID,
-		Votes:        votes,
-		Participants: participants,
-	}
-	if err := submission.Validate(); err != nil {
-		writeStoreError(w, err)
-		return
-	}
-
-	if err := s.store.ReplaceVotes(r.Context(), matchID, user.ID, votes); err != nil {
-		writeStoreError(w, err)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+	return votes, true
 }
 
 // handleRemoveVote desfaz o voto do usuário num candidato da categoria.
@@ -444,7 +429,7 @@ func (s *Server) handleDrawTeams(w http.ResponseWriter, r *http.Request) {
 	var players []store.TeamMember
 	for _, e := range entries {
 		if e.Response == "going" {
-			players = append(players, store.TeamMember{UserID: e.UserID, Name: e.Name, AvatarColor: e.AvatarColor})
+			players = append(players, store.TeamMember{UserID: e.UserID, Name: e.Name, AvatarColor: e.AvatarColor, Kind: e.Kind})
 		}
 	}
 	if len(players) < 2 {
@@ -492,6 +477,7 @@ func (s *Server) handleFinishMatch(w http.ResponseWriter, r *http.Request) {
 	}
 	s.store.LogActivity(r.Context(), &user.ID, "match_finished",
 		fmt.Sprintf("%s encerrou a partida; votação aberta até %s", user.Name, closes.Format("02/01")))
+	s.scheduleGuestVoteLinks(r.Context(), matchID) // participação avulsa (fase C)
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 

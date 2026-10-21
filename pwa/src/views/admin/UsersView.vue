@@ -1,14 +1,24 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { api, errorMessage } from '../../api/client'
-import type { Charge, ChargeBatch, User } from '../../api/types'
-import { formatCents, formatDMY, formatMonth } from '../../lib/format'
+import type { Charge, ChargeBatch, User, UserKind } from '../../api/types'
+import { formatCents, formatDMY, formatMonth, formatPhoneBR } from '../../lib/format'
 import AdminLayout from '../../components/layout/AdminLayout.vue'
 import NavIcon from '../../components/layout/NavIcon.vue'
 import Avatar from '../../components/ui/Avatar.vue'
+import Badge from '../../components/ui/Badge.vue'
 import BaseButton from '../../components/ui/BaseButton.vue'
 import Card from '../../components/ui/Card.vue'
 import Modal from '../../components/ui/Modal.vue'
+
+// Membros (padrão) ou avulsos: a API separa pelo tipo de cadastro, inclusive
+// na contagem e na paginação. Avulso não tem perfil, acesso nem financeiro.
+const kind = ref<UserKind>('member')
+const isGuest = computed(() => kind.value === 'guest')
+const KINDS: { value: UserKind; label: string }[] = [
+  { value: 'member', label: 'Membros' },
+  { value: 'guest', label: 'Avulsos' },
+]
 
 const users = ref<User[]>([])
 const total = ref(0)
@@ -38,9 +48,21 @@ watch(search, () => {
 })
 watch([roleFilter, statusFilter, financialFilter, page], load)
 
+function setKind(value: UserKind) {
+  if (kind.value === value) return
+  kind.value = value
+  // Os filtros de membro não se aplicam a avulsos.
+  roleFilter.value = ''
+  statusFilter.value = ''
+  financialFilter.value = ''
+  page.value = 1
+  void load()
+}
+
 async function load() {
   const { data } = await api.get<{ users: User[]; total: number }>('/admin/users', {
     params: {
+      kind: kind.value,
       search: search.value || undefined,
       role: roleFilter.value || undefined,
       status: statusFilter.value || undefined,
@@ -54,6 +76,7 @@ async function load() {
 
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / 20)))
 const summary = computed(() => {
+  if (isGuest.value) return `${total.value} avulsos · cada inscrição paga cria um cadastro`
   const active = users.value.filter((u) => u.status === 'active').length
   const inactive = users.value.filter((u) => u.status === 'inactive').length
   return `${total.value} usuários · ${active} ativos e ${inactive} inativos nesta página`
@@ -64,6 +87,7 @@ async function openUser(user: User) {
   form.value = { name: user.name, phone: user.phone, email: user.email, role: user.role }
   error.value = ''
   selectedCharges.value = []
+  if (user.kind === 'guest') return // avulso não entra em mensalidade
   // Reaproveita a listagem de cobranças do mês; o detalhe mostra as do usuário.
   const { data } = await api.get<{ batches: ChargeBatch[]; charges: Charge[] }>('/admin/charges')
   selectedCharges.value = (data.charges ?? []).filter((c) => c.user_id === user.id)
@@ -129,6 +153,21 @@ function financialBadge(user: User) {
     </template>
 
     <div class="flex flex-col gap-4">
+      <!-- Tipo de cadastro -->
+      <div class="grid w-full grid-cols-2 gap-1 rounded-[11px] bg-surface2 p-1 sm:w-[260px]" role="group" aria-label="Tipo de usuário">
+        <button
+          v-for="k in KINDS"
+          :key="k.value"
+          type="button"
+          class="h-9 rounded-[9px] text-[13px] font-semibold"
+          :class="kind === k.value ? 'bg-surface text-ink shadow-sm' : 'text-ink3'"
+          :aria-pressed="kind === k.value"
+          @click="setKind(k.value)"
+        >
+          {{ k.label }}
+        </button>
+      </div>
+
       <!-- Filtros -->
       <div class="flex flex-wrap gap-2.5">
         <div class="flex h-10 min-w-[220px] flex-1 items-center gap-2.5 rounded-[11px] border border-border bg-surface px-3.5">
@@ -140,6 +179,7 @@ function financialBadge(user: User) {
             class="w-full bg-transparent text-[13.5px] text-ink outline-none placeholder:text-ink3"
           />
         </div>
+        <template v-if="!isGuest">
         <select v-model="roleFilter" class="filter">
           <option value="">Perfil: Todos</option>
           <option value="admin">Admin</option>
@@ -157,20 +197,26 @@ function financialBadge(user: User) {
           <option value="pending">Aguardando</option>
           <option value="overdue">Inadimplente</option>
         </select>
+        </template>
       </div>
 
       <!-- Tabela -->
       <Card class="overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="w-full min-w-[880px] text-left">
+          <table class="w-full text-left" :class="isGuest ? 'min-w-[520px]' : 'min-w-[880px]'">
             <thead>
               <tr class="bg-surface2 text-[10.5px] font-bold uppercase tracking-[.08em] text-ink3">
                 <th class="whitespace-nowrap px-5 py-3 font-bold">Jogador</th>
                 <th class="whitespace-nowrap px-3 py-3 font-bold">WhatsApp</th>
-                <th class="whitespace-nowrap px-3 py-3 font-bold">Perfil</th>
-                <th class="whitespace-nowrap px-3 py-3 font-bold">Acesso</th>
-                <th class="whitespace-nowrap px-3 py-3 font-bold">Financeiro</th>
-                <th class="whitespace-nowrap px-3 py-3 font-bold">Últ. pagamento</th>
+                <template v-if="isGuest">
+                  <th class="whitespace-nowrap px-3 py-3 font-bold">Cadastro</th>
+                </template>
+                <template v-else>
+                  <th class="whitespace-nowrap px-3 py-3 font-bold">Perfil</th>
+                  <th class="whitespace-nowrap px-3 py-3 font-bold">Acesso</th>
+                  <th class="whitespace-nowrap px-3 py-3 font-bold">Financeiro</th>
+                  <th class="whitespace-nowrap px-3 py-3 font-bold">Últ. pagamento</th>
+                </template>
                 <th class="whitespace-nowrap px-5 py-3 text-right font-bold">Ações</th>
               </tr>
             </thead>
@@ -179,18 +225,23 @@ function financialBadge(user: User) {
                 v-for="user in users"
                 :key="user.id"
                 class="border-t border-border"
-                :class="user.delinquent ? 'bg-dangerBg' : ''"
+                :class="user.delinquent && !isGuest ? 'bg-dangerBg' : ''"
               >
                 <td class="px-5 py-2.5">
                   <div class="flex items-center gap-2.5">
                     <Avatar :name="user.name" :color="user.avatar_color" size="sm" />
                     <div class="min-w-0">
-                      <div class="truncate text-[13.5px] font-semibold">{{ user.name }}</div>
-                      <div class="truncate text-[11.5px] text-ink3">{{ user.email }}</div>
+                      <div class="flex items-center gap-1.5">
+                        <span class="truncate text-[13.5px] font-semibold">{{ user.name }}</span>
+                        <Badge v-if="user.kind === 'guest'" tone="info">Avulso</Badge>
+                      </div>
+                      <div v-if="user.email" class="truncate text-[11.5px] text-ink3">{{ user.email }}</div>
                     </div>
                   </div>
                 </td>
-                <td class="px-3 py-2.5 text-[13px] text-ink2">{{ user.phone || '—' }}</td>
+                <td class="px-3 py-2.5 text-[13px] text-ink2">{{ user.phone ? formatPhoneBR(user.phone) : '—' }}</td>
+                <td v-if="isGuest" class="px-3 py-2.5 text-[13px] text-ink2">{{ formatDMY(user.created_at.slice(0, 10)) }}</td>
+                <template v-else>
                 <td class="px-3 py-2.5">
                   <span
                     class="inline-flex rounded-[7px] px-2.5 py-[3px] text-[11px] font-semibold"
@@ -212,6 +263,7 @@ function financialBadge(user: User) {
                 <td class="px-3 py-2.5 text-[13px] text-ink2">
                   {{ user.last_payment_at ? formatDMY(user.last_payment_at.slice(0, 10)) : '—' }}
                 </td>
+                </template>
                 <td class="px-5 py-2.5 text-right">
                   <button type="button" class="px-2 text-base font-bold tracking-[2px] text-ink3 hover:text-ink" @click="openUser(user)">
                     ⋯
@@ -219,14 +271,16 @@ function financialBadge(user: User) {
                 </td>
               </tr>
               <tr v-if="users.length === 0">
-                <td colspan="7" class="px-5 py-10 text-center text-sm text-ink3">Nenhum usuário encontrado com esses filtros.</td>
+                <td :colspan="isGuest ? 4 : 7" class="px-5 py-10 text-center text-sm text-ink3">
+                  {{ isGuest ? 'Nenhum avulso encontrado.' : 'Nenhum usuário encontrado com esses filtros.' }}
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <div class="flex items-center justify-between border-t border-border px-5 py-3">
-          <span class="text-[12.5px] text-ink3">Mostrando {{ users.length }} de {{ total }} usuários</span>
+          <span class="text-[12.5px] text-ink3">Mostrando {{ users.length }} de {{ total }} {{ isGuest ? 'avulsos' : 'usuários' }}</span>
           <div class="flex gap-1.5">
             <button
               v-for="p in pageCount"
@@ -245,7 +299,25 @@ function financialBadge(user: User) {
 
     <!-- Detalhe / edição -->
     <Modal :open="selected !== null" :title="selected?.name ?? ''" @close="selected = null">
-      <div v-if="selected" class="flex flex-col gap-4">
+      <div v-if="selected?.kind === 'guest'" class="flex flex-col gap-4" data-test="guest-detail">
+        <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13px]">
+          <dt class="text-ink3">WhatsApp</dt>
+          <dd class="font-medium">{{ selected.phone ? formatPhoneBR(selected.phone) : '—' }}</dd>
+          <dt class="text-ink3">Cadastro</dt>
+          <dd class="font-medium">{{ formatDMY(selected.created_at.slice(0, 10)) }}</dd>
+        </dl>
+        <p class="text-[12.5px] leading-relaxed text-ink2">
+          Avulso não é membro: não tem login, não entra no rateio das mensalidades e não pode virar admin. Inscrição,
+          pagamento e mensagens ficam na tela de avulsos.
+        </p>
+        <router-link
+          :to="{ path: '/admin/avulsos', query: { q: selected.phone || selected.name } }"
+          class="inline-flex h-[38px] w-fit items-center rounded-[10px] border-[1.5px] border-brand px-4 text-[13px] font-bold text-brand"
+        >
+          Ver inscrições
+        </router-link>
+      </div>
+      <div v-else-if="selected" class="flex flex-col gap-4">
         <div class="grid grid-cols-2 gap-3">
           <label class="flex flex-col gap-1.5">
             <span class="text-[12.5px] font-semibold text-ink2">Nome</span>

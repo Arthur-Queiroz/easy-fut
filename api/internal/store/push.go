@@ -46,7 +46,7 @@ func (s *Store) QueueMatchReminders(ctx context.Context, lead time.Duration) err
 	_, err := s.pool.Exec(ctx, `insert into match_push_deliveries(subscription_id,match_id,kind)
  select p.id,m.id,'reminder' from matches m
  join match_confirmations c on c.match_id=m.id and c.response='no_response'
- join users u on u.id=c.user_id and u.status='active'
+ join users u on u.id=c.user_id and u.status='active' and u.kind='member'
  join push_subscriptions p on p.user_id=u.id
  where m.status='open' and m.confirmation_deadline>now()
  and m.confirmation_deadline<=now()+($1*interval '1 second')
@@ -71,7 +71,7 @@ func (s *Store) ClaimPushDelivery(ctx context.Context, lead time.Duration) (Push
  join users u on u.id=p.user_id
  join matches m on m.id=d.match_id
  where d.status='pending' and d.next_attempt_at<=now() and d.attempts<5
- and u.status='active' and m.status='open' and m.confirmation_deadline>now()
+ and u.status='active' and u.kind='member' and m.status='open' and m.confirmation_deadline>now()
  and (d.kind='created' or ($1>0 and m.confirmation_deadline<=now()+($1*interval '1 second')
  and exists(select 1 from match_confirmations c where c.match_id=m.id and c.user_id=u.id and c.response='no_response')))
  order by d.next_attempt_at,d.id for update of d skip locked limit 1

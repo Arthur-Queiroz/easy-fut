@@ -8,11 +8,15 @@ export interface User {
   avatar_color: string
   role: 'admin' | 'player'
   status: 'active' | 'inactive' | 'archived'
+  kind: UserKind
   inactive_reason: string
   delinquent: boolean
   last_payment_at?: string
   created_at: string
 }
+
+// member: integrante do grupo; guest: avulso que pagou uma vaga (sem conta).
+export type UserKind = 'member' | 'guest'
 
 export interface UserStats {
   matches_played: number
@@ -63,6 +67,13 @@ export interface Match {
   no_response_count: number
   media_count: number
   results?: VoteResult[]
+  // Participação avulsa: venda por partida, com preço e total congelados ao abrir.
+  guest_sale_open: boolean
+  guest_slots: number
+  guest_price_cents: number // valor base que vai para o caixa
+  guest_total_cents: number // o que o avulso paga (taxa do Pix embutida)
+  guest_confirmed_count: number // inscrições confirmadas
+  guest_pending_count: number // reserved + pending_payment
 }
 
 export type Response = 'going' | 'not_going' | 'no_response'
@@ -72,6 +83,7 @@ export interface ConfirmationEntry {
   name: string
   avatar_color: string
   role: 'admin' | 'player'
+  kind: UserKind
   response: Response
   responded_at?: string
 }
@@ -89,6 +101,7 @@ export interface TeamMember {
   user_id: string
   name: string
   avatar_color: string
+  kind: UserKind
 }
 
 // Grupo salvo de jogadores para agilizar a escalação manual (admin).

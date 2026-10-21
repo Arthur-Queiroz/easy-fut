@@ -22,10 +22,11 @@ type PushRecipient struct {
 }
 
 // Everyone not archived can be picked; "all" reaches only active users.
+// Avulsos não fazem parte do grupo e nunca recebem avisos.
 func (s *Store) ListPushRecipients(ctx context.Context) ([]PushRecipient, error) {
 	rows, err := s.pool.Query(ctx, `select u.id,u.name,u.status,u.avatar_color,count(p.id)::int from users u
  left join push_subscriptions p on p.user_id=u.id
- where u.status<>'archived' group by u.id order by u.name`)
+ where u.status<>'archived' and u.kind='member' group by u.id order by u.name`)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +80,7 @@ func (s *Store) CreatePushBroadcast(ctx context.Context, in BroadcastInput, crea
 	}
 	tag, err := tx.Exec(ctx, `insert into broadcast_push_deliveries(subscription_id,broadcast_id)
  select p.id,$1 from push_subscriptions p join users u on u.id=p.user_id
- where ($2='all' and u.status='active') or ($2='selected' and u.status<>'archived' and u.id=any($3::uuid[]))
+ where u.kind='member' and (($2='all' and u.status='active') or ($2='selected' and u.status<>'archived' and u.id=any($3::uuid[])))
  on conflict do nothing`, b.ID, in.Audience, ids)
 	if err != nil {
 		return b, err
@@ -138,7 +139,7 @@ func (s *Store) ClaimBroadcastDelivery(ctx context.Context) (BroadcastDelivery, 
  join users u on u.id=p.user_id
  join push_broadcasts b on b.id=d.broadcast_id
  where d.status='pending' and d.next_attempt_at<=now() and d.attempts<5
- and u.status<>'archived' and (b.audience='selected' or u.status='active')
+ and u.kind='member' and u.status<>'archived' and (b.audience='selected' or u.status='active')
  and b.created_at>now()-($1*interval '1 second')
  order by d.next_attempt_at,d.id for update of d skip locked limit 1
  ), claimed as (

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"futdarapaziada/api/internal/billing"
+	"futdarapaziada/api/internal/guests"
 	"futdarapaziada/api/internal/matches"
 )
 
@@ -38,6 +39,41 @@ func TestWriteStoreErrorVotingContract(t *testing.T) {
 	}
 	if got := matches.ErrVoteLimit.Error(); got != "você já usou seus 2 votos nesta categoria" {
 		t.Errorf("mensagem do limite mudou: %q", got)
+	}
+}
+
+// Contrato da participação avulsa: conflitos de venda em 409 e dados do
+// formulário em 400, sempre com a mensagem do domínio.
+func TestWriteStoreErrorGuestsContract(t *testing.T) {
+	cases := []struct {
+		err    error
+		status int
+	}{
+		{guests.ErrSoldOut, http.StatusConflict},
+		{guests.ErrSaleClosed, http.StatusConflict},
+		{guests.ErrPhoneAlreadyBooked, http.StatusConflict},
+		{guests.ErrInvalidTransition, http.StatusConflict},
+		{guests.ErrInvalidPhone, http.StatusBadRequest},
+		{guests.ErrInvalidEmail, http.StatusBadRequest},
+		{guests.ErrInvalidName, http.StatusBadRequest},
+		{guests.ErrInvalidExpense, http.StatusBadRequest},
+		// Fase B: ações do admin.
+		{guests.ErrInvalidSlots, http.StatusBadRequest},
+		{guests.ErrInvalidPrice, http.StatusBadRequest},
+		{guests.ErrMatchNotOpen, http.StatusConflict},
+		{guests.ErrSlotsBelowBooked, http.StatusConflict},
+	}
+	for _, tc := range cases {
+		rec := httptest.NewRecorder()
+		writeStoreError(rec, tc.err)
+
+		var body apiError
+		if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if rec.Code != tc.status || body.Error != tc.err.Error() {
+			t.Errorf("%v: %d %q, want %d com a mensagem do domínio", tc.err, rec.Code, body.Error, tc.status)
+		}
 	}
 }
 

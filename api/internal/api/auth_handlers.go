@@ -65,8 +65,9 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// UserByEmail só encontra membros: avulso não tem conta.
 	user, hash, err := s.store.UserByEmail(r.Context(), body.Email)
-	if errors.Is(err, store.ErrNotFound) || (err == nil && !auth.CheckPassword(hash, body.Password)) {
+	if errors.Is(err, store.ErrNotFound) || (err == nil && (user.Kind != store.KindMember || !auth.CheckPassword(hash, body.Password))) {
 		writeError(w, http.StatusUnauthorized, "e-mail ou senha incorretos")
 		return
 	}

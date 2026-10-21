@@ -89,6 +89,15 @@ export function countdown(ts: string): string | null {
   return `${hours}h${pad(minutes)}`
 }
 
+/** Tempo restante até um timestamp em 'mm:ss' (ou 'h:mm:ss'); '00:00' se já passou. */
+export function formatRemaining(ts: string, now: number = Date.now()): string {
+  const total = Math.max(0, Math.floor((new Date(ts).getTime() - now) / 1000))
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const seconds = total % 60
+  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`
+}
+
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/)
   const first = parts[0]?.[0] ?? ''
@@ -104,6 +113,20 @@ function pad(n: number): string {
 export function todayISO(): string {
   const d = new Date()
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+/** Celular em E.164 ('+5511987654321') → '(11) 98765-4321'. Outros formatos voltam como estão. */
+export function formatPhoneBR(phone: string): string {
+  const m = /^\+?55(\d{2})(\d{4,5})(\d{4})$/.exec(phone.replace(/[^\d+]/g, ''))
+  if (!m) return phone
+  return `(${m[1]}) ${m[2]}-${m[3]}`
+}
+
+/** Primeiro e último dia de um mês ('YYYY-MM') no formato 'YYYY-MM-DD'. */
+export function monthBounds(referenceMonth: string): { from: string; to: string } {
+  const [y, m] = referenceMonth.split('-').map(Number)
+  const last = new Date(y, m, 0).getDate()
+  return { from: `${y}-${pad(m)}-01`, to: `${y}-${pad(m)}-${pad(last)}` }
 }
 
 /** 'YYYY-MM' do mês atual (ou seguinte com offset). */

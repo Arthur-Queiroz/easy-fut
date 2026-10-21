@@ -2,12 +2,27 @@ package store
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// ensureTestExtensions instala o pgcrypto em public antes das migrations.
+// Sem isso, o "create extension if not exists" da 001 cria a extensão no
+// schema do teste (o primeiro do search_path), que é apagado no fim, e dois
+// pacotes de teste migrando ao mesmo tempo disputam a criação (23505).
+func ensureTestExtensions(ctx context.Context, root *pgxpool.Pool) error {
+	_, err := root.Exec(ctx, `create extension if not exists pgcrypto with schema public`)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return nil // outro pacote criou no mesmo instante
+	}
+	return err
+}
 
 // newTestStore cria um schema isolado com as migrations aplicadas e o remove
 // no fim do teste; nenhum registro da aplicação é lido ou alterado.
@@ -20,6 +35,10 @@ func newTestStore(t *testing.T, prefix string) *Store {
 	ctx := context.Background()
 	root, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureTestExtensions(ctx, root); err != nil {
+		root.Close()
 		t.Fatal(err)
 	}
 	schema := prefix + "_" + uuid.NewString()[:8]

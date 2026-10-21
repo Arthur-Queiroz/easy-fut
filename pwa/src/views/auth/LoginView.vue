@@ -83,15 +83,11 @@ async function submit() {
       >
         {{ loading ? 'Entrando…' : 'Entrar' }}
       </button>
-      <p class="text-center text-[13px] text-white/55">O cadastro é feito apenas por link de convite</p>
+      <p class="text-center text-[13px] text-white/55 md:text-ink3">O cadastro é feito apenas por link de convite</p>
+      <div class="mt-1 border-t border-white/10 pt-4 text-center text-[13px] text-white/55 md:border-border md:text-ink3">
+        Não é do grupo?
+        <router-link :to="{ name: 'guest-matches' }" class="font-semibold text-lime md:text-brand">Jogar uma partida avulsa</router-link>
+      </div>
     </form>
   </div>
 </template>
-
-<style scoped>
-@media (min-width: 768px) {
-  form > p:last-child {
-    color: var(--ink3);
-  }
-}
-</style>

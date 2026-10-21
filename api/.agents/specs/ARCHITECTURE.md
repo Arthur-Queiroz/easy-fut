@@ -10,6 +10,7 @@ internal/
   busdays/          prazos em dias úteis (seg–sex, sem feriados)
   config/           configuração por variáveis de ambiente
   draw/             sorteio e escalação manual dos times
+  guests/           domínio da participação avulsa: telefone, venda, estados da inscrição, caixa
   jobs/             cron: confirmações, votação, vencimento, filas de WhatsApp e push
   mailer/           e-mail transacional (Resend)
   matches/          domínio das partidas (hoje: regras da votação)
@@ -52,8 +53,11 @@ camada.
 - Integrações externas ficam atrás de um tipo próprio (`notify.Sender`,
   `push`, `mercadopago`, `mailer`) para os testes não falarem com a rede.
 
-Migração em andamento: a votação já está em `matches` e a taxa do Pix em
-`billing`. As demais regras (rateio, inadimplência, transições de partida,
+Migração em andamento: a votação já está em `matches`, a taxa do Pix em
+`billing` e a participação avulsa nasceu em `guests` (formulário,
+`CheckSaleOpen`, transições, `OnPaymentApproved`, `OnMatchCancelled`,
+despesas do caixa; e, para o admin, `CheckSaleOpening`, `ParsePrice` e
+`CheckRefund`). As demais regras (rateio, inadimplência, transições de partida,
 convites) ainda estão nos handlers e no SQL. Ao mexer numa delas, prefira migrá-la seguindo o ADR.
 
 Não introduza ORM, `sqlc`, injeção de dependência ou repositórios genéricos
@@ -82,6 +86,9 @@ Parâmetros de caminho são lidos com `r.PathValue("id")`.
   deploy e o rollback não desfaz o banco).
 - Estados são `text` com `check (... in (...))`. Ao acrescentar um estado,
   altere a constraint, `models.go` e `pwa/src/api/types.ts`.
+- `users.kind` separa membros (`member`) de avulsos (`guest`, sem e-mail
+  nem senha). Consulta nova que fala do grupo filtra `u.kind = 'member'`;
+  leitura de usuário usa `coalesce(email, '')` (ver `userColumns`).
 - Valores monetários em centavos (`int64`, sufixo `_cents`). Datas de
   calendário como `date` e trafegadas como `YYYY-MM-DD`; mês de referência
   como `YYYY-MM`.

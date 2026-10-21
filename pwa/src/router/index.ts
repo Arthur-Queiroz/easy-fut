@@ -10,6 +10,10 @@ export const router = createRouter({
     { path: '/login', name: 'login', component: () => import('../views/auth/LoginView.vue'), meta: { public: true } },
     { path: '/esqueci-minha-senha', name: 'forgot-password', component: () => import('../views/auth/ForgotPasswordView.vue'), meta: { public: true } },
     { path: '/redefinir-senha', name: 'reset-password', component: () => import('../views/auth/ResetPasswordView.vue'), meta: { public: true } },
+    // Participação avulsa (sem login)
+    { path: '/avulso', name: 'guest-matches', component: () => import('../views/guest/GuestMatchesView.vue'), meta: { public: true } },
+    { path: '/avulso/inscricao/:id', name: 'guest-booking', component: () => import('../views/guest/GuestBookingView.vue'), meta: { public: true } },
+    { path: '/votar/:token', name: 'guest-vote', component: () => import('../views/guest/GuestVoteView.vue'), meta: { public: true } },
     { path: '/bloqueado', name: 'blocked', component: () => import('../views/app/BlockedView.vue') },
 
     // Painel do usuário
@@ -27,6 +31,8 @@ export const router = createRouter({
     { path: '/admin/usuarios', name: 'admin-users', component: () => import('../views/admin/UsersView.vue'), meta: { admin: true } },
     { path: '/admin/mensalidades', name: 'admin-charges', component: () => import('../views/admin/ChargesView.vue'), meta: { admin: true } },
     { path: '/admin/convites', name: 'admin-invites', component: () => import('../views/admin/InvitesView.vue'), meta: { admin: true } },
+    { path: '/admin/avulsos', name: 'admin-guests', component: () => import('../views/admin/GuestsView.vue'), meta: { admin: true } },
+    { path: '/admin/caixa', name: 'admin-cash', component: () => import('../views/admin/CashView.vue'), meta: { admin: true } },
     { path: '/admin/recorrencias', name: 'admin-recurring', component: () => import('../views/admin/RecurringView.vue'), meta: { admin: true } },
     { path: '/admin/votos', name: 'admin-votes', component: () => import('../views/admin/VotesView.vue'), meta: { admin: true } },
     { path: '/admin/avisos', name: 'admin-notifications', component: () => import('../views/admin/NotificationsView.vue'), meta: { admin: true } },

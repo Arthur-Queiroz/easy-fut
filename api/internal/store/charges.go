@@ -252,6 +252,8 @@ func (s *Store) GenerateBatch(ctx context.Context, month string, totalCents int6
 	return s.batchByID(ctx, batchID)
 }
 
+// ErrInvalidParticipants também vale para avulsos: cobrança de partida é
+// rateio entre membros.
 var ErrInvalidParticipants = errors.New("todos os participantes precisam estar ativos")
 
 // GenerateMatchBatch cria um lote de partida avulsa rateando o valor total entre os
@@ -259,7 +261,7 @@ var ErrInvalidParticipants = errors.New("todos os participantes precisam estar a
 // Diferente da mensalidade, não há limite por mês.
 func (s *Store) GenerateMatchBatch(ctx context.Context, month, title string, totalCents int64, dueDate time.Time, generatedBy string, userIDs []string, pixRate billing.FeeRate) (ChargeBatch, error) {
 	rows, err := s.pool.Query(ctx,
-		`select id from users where id = any($1::uuid[]) and status = 'active'`, userIDs)
+		`select id from users where id = any($1::uuid[]) and status = 'active' and kind = 'member'`, userIDs)
 	if err != nil {
 		return ChargeBatch{}, err
 	}
@@ -367,7 +369,7 @@ func (s *Store) MarkChargePaid(ctx context.Context, chargeID, method string, reg
 func (s *Store) reactivateIfClear(ctx context.Context, userID, changedBy string) (bool, error) {
 	var eligible bool
 	err := s.pool.QueryRow(ctx, `
-		select u.status = 'inactive'
+		select u.status = 'inactive' and u.kind = 'member'
 		   and not exists (select 1 from charges c where c.user_id = u.id and c.status = 'overdue')
 		from users u where u.id = $1`, userID).Scan(&eligible)
 	if err != nil || !eligible {
@@ -426,11 +428,12 @@ func (s *Store) MarkOverdueCharges(ctx context.Context) ([]OverdueCharge, error)
 	return overdue, rows.Err()
 }
 
-// UsersToInactivate lista usuários ativos com cobrança vencida há mais de graceDays.
+// UsersToInactivate lista membros ativos com cobrança vencida há mais de
+// graceDays. Inadimplência é regra de mensalista: avulso nunca entra.
 func (s *Store) UsersToInactivate(ctx context.Context, graceDays int) ([]User, error) {
 	rows, err := s.pool.Query(ctx, `
 		select `+userColumns+` from users u
-		where u.status = 'active' and exists (
+		where u.status = 'active' and u.kind = 'member' and exists (
 			select 1 from charges c
 			where c.user_id = u.id and c.status = 'overdue'
 			  and c.due_date < current_date - make_interval(days => $1)::interval

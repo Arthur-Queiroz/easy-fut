@@ -10,6 +10,7 @@ type User struct {
 	AvatarColor    string     `json:"avatar_color"`
 	Role           string     `json:"role"`
 	Status         string     `json:"status"`
+	Kind           string     `json:"kind"` // "member" ou "guest" (avulso, sem conta)
 	InactiveReason string     `json:"inactive_reason"`
 	Delinquent     bool       `json:"delinquent"`
 	LastPaymentAt  *time.Time `json:"last_payment_at,omitempty"`
@@ -52,6 +53,14 @@ type Match struct {
 	NotGoingCount   int `json:"not_going_count"`
 	NoResponseCount int `json:"no_response_count"`
 	MediaCount      int `json:"media_count"`
+
+	// Venda de vagas avulsas: preço e total congelados ao abrir a venda.
+	GuestSaleOpen       bool  `json:"guest_sale_open"`
+	GuestSlots          int   `json:"guest_slots"`
+	GuestPriceCents     int64 `json:"guest_price_cents"`
+	GuestTotalCents     int64 `json:"guest_total_cents"`
+	GuestConfirmedCount int   `json:"guest_confirmed_count"` // inscrições confirmed
+	GuestPendingCount   int   `json:"guest_pending_count"`   // reserved + pending_payment
 }
 
 type ConfirmationEntry struct {
@@ -59,6 +68,7 @@ type ConfirmationEntry struct {
 	Name        string     `json:"name"`
 	AvatarColor string     `json:"avatar_color"`
 	Role        string     `json:"role"`
+	Kind        string     `json:"kind"` // "member" ou "guest": selo Avulso
 	Response    string     `json:"response"`
 	RespondedAt *time.Time `json:"responded_at,omitempty"`
 }
@@ -76,6 +86,7 @@ type TeamMember struct {
 	UserID      string `json:"user_id"`
 	Name        string `json:"name"`
 	AvatarColor string `json:"avatar_color"`
+	Kind        string `json:"kind"` // "member" ou "guest": selo Avulso
 }
 
 // TeamPreset é um grupo salvo de jogadores para agilizar a escalação manual.
@@ -158,4 +169,52 @@ type Activity struct {
 	Kind      string    `json:"kind"`
 	Message   string    `json:"message"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+// GuestBooking é a inscrição de um avulso numa partida. Valores congelados na
+// compra: base (vai para o caixa), taxa do Pix embutida e total cobrado.
+type GuestBooking struct {
+	ID                   string     `json:"id"`
+	MatchID              string     `json:"match_id"`
+	UserID               string     `json:"user_id"`
+	Name                 string     `json:"name"`
+	Phone                string     `json:"phone"` // E.164
+	Email                string     `json:"email"`
+	Status               string     `json:"status"`
+	BaseCents            int64      `json:"base_cents"`
+	TotalCents           int64      `json:"total_cents"`
+	FeeCents             int64      `json:"fee_cents"`
+	ExpiresAt            time.Time  `json:"expires_at"`
+	ConfirmedAt          *time.Time `json:"confirmed_at,omitempty"`
+	AccessTokenHash      string     `json:"-"`
+	ProviderOrderID      string     `json:"-"`
+	ProviderPaymentID    string     `json:"-"`
+	PixPayload           string     `json:"pix_payload"`
+	PixQRCodeBase64      string     `json:"pix_qr_code_base64"`
+	PixTicketURL         string     `json:"pix_ticket_url"`
+	ProviderStatus       string     `json:"-"`
+	ProviderStatusDetail string     `json:"-"`
+	RefundReason         string     `json:"refund_reason"`
+	CreatedAt            time.Time  `json:"created_at"`
+}
+
+// CashEntry é um lançamento do caixa do grupo. O valor é positivo; o sinal
+// vem do tipo (guests.CashSign).
+type CashEntry struct {
+	ID            string    `json:"id"`
+	Kind          string    `json:"kind"` // guest_payment, refund, expense
+	AmountCents   int64     `json:"amount_cents"`
+	FeeCents      int64     `json:"fee_cents"`
+	BookingID     *string   `json:"booking_id"` // nulo em despesa
+	Description   string    `json:"description"`
+	OccurredOn    string    `json:"occurred_on"` // YYYY-MM-DD
+	CreatedBy     *string   `json:"created_by,omitempty"`
+	CreatedByName string    `json:"created_by_name"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
+// CashReport é o caixa: o saldo de todos os lançamentos e a lista do período.
+type CashReport struct {
+	BalanceCents int64       `json:"balance_cents"`
+	Entries      []CashEntry `json:"entries"`
 }

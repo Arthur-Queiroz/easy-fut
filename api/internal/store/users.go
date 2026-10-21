@@ -11,16 +11,25 @@ import (
 
 var ErrNotFound = errors.New("registro não encontrado")
 
+// Tipos de usuário (users.kind). Avulso (guest) é quem comprou uma vaga numa
+// partida: não tem conta, não faz parte do grupo e fica fora de tudo que fala
+// do grupo (rateio, confirmações iniciais, push, painel, inadimplência).
+const (
+	KindMember = "member"
+	KindGuest  = "guest"
+)
+
 // userColumns traz o usuário junto com o estado financeiro derivado das cobranças:
 // delinquent = tem cobrança vencida; last_payment_at = último pagamento confirmado.
+// O e-mail é nulo para avulsos; coalesce mantém o contrato de string vazia.
 const userColumns = `
-	u.id, u.name, u.email, u.phone, u.avatar_color, u.role, u.status, u.inactive_reason, u.created_at, u.session_version,
+	u.id, u.name, coalesce(u.email, ''), u.phone, u.avatar_color, u.role, u.status, u.kind, u.inactive_reason, u.created_at, u.session_version,
 	exists (select 1 from charges c where c.user_id = u.id and c.status = 'overdue') as delinquent,
 	(select max(c.paid_at) from charges c where c.user_id = u.id and c.status in ('paid','manual_paid')) as last_payment_at`
 
 func scanUser(row pgx.Row) (User, error) {
 	var u User
-	err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Phone, &u.AvatarColor, &u.Role, &u.Status,
+	err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Phone, &u.AvatarColor, &u.Role, &u.Status, &u.Kind,
 		&u.InactiveReason, &u.CreatedAt, &u.SessionVersion, &u.Delinquent, &u.LastPaymentAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return u, ErrNotFound
@@ -32,11 +41,14 @@ func (s *Store) UserByID(ctx context.Context, id string) (User, error) {
 	return scanUser(s.pool.QueryRow(ctx, `select `+userColumns+` from users u where u.id = $1`, id))
 }
 
+// UserByEmail é a leitura do login: só encontra membros, porque avulso não
+// tem conta.
 func (s *Store) UserByEmail(ctx context.Context, email string) (User, string, error) {
 	var u User
 	var hash string
-	err := s.pool.QueryRow(ctx, `select `+userColumns+`, u.password_hash from users u where lower(u.email) = lower($1)`, email).
-		Scan(&u.ID, &u.Name, &u.Email, &u.Phone, &u.AvatarColor, &u.Role, &u.Status,
+	err := s.pool.QueryRow(ctx, `select `+userColumns+`, coalesce(u.password_hash, '') from users u
+		where lower(u.email) = lower($1) and u.kind = 'member'`, email).
+		Scan(&u.ID, &u.Name, &u.Email, &u.Phone, &u.AvatarColor, &u.Role, &u.Status, &u.Kind,
 			&u.InactiveReason, &u.CreatedAt, &u.SessionVersion, &u.Delinquent, &u.LastPaymentAt, &hash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return u, "", ErrNotFound
@@ -53,8 +65,8 @@ func (s *Store) CountUsers(ctx context.Context) (int, error) {
 func (s *Store) CreateUser(ctx context.Context, name, email, phone, passwordHash, avatarColor, role string) (User, error) {
 	var id string
 	err := s.pool.QueryRow(ctx, `
-		insert into users (name, email, phone, password_hash, avatar_color, role)
-		values ($1, $2, $3, $4, $5, $6) returning id`,
+		insert into users (name, email, phone, password_hash, avatar_color, role, kind)
+		values ($1, $2, $3, $4, $5, $6, 'member') returning id`,
 		name, email, phone, passwordHash, avatarColor, role).Scan(&id)
 	if err != nil {
 		return User{}, err
@@ -63,6 +75,7 @@ func (s *Store) CreateUser(ctx context.Context, name, email, phone, passwordHash
 }
 
 type UserFilter struct {
+	Kind      string // "" (= member), "member", "guest"
 	Search    string
 	Role      string // "", "admin", "player"
 	Status    string // "", "active", "inactive", "archived"
@@ -72,12 +85,16 @@ type UserFilter struct {
 }
 
 func (s *Store) ListUsers(ctx context.Context, f UserFilter) ([]User, int, error) {
-	where := []string{"true"}
 	args := []any{}
 	arg := func(v any) string {
 		args = append(args, v)
 		return fmt.Sprintf("$%d", len(args))
 	}
+	// Sem tipo, só membros: a PWA anterior ao filtro não pode ver avulsos.
+	if f.Kind == "" {
+		f.Kind = KindMember
+	}
+	where := []string{"u.kind = " + arg(f.Kind)}
 
 	if f.Search != "" {
 		where = append(where, "(u.name ilike "+arg("%"+f.Search+"%")+" or u.email ilike "+arg("%"+f.Search+"%")+")")
@@ -130,8 +147,10 @@ func (s *Store) ListUsers(ctx context.Context, f UserFilter) ([]User, int, error
 	return users, total, rows.Err()
 }
 
+// ActiveUsers são os membros ativos: a base do rateio da mensalidade.
 func (s *Store) ActiveUsers(ctx context.Context) ([]User, error) {
-	rows, err := s.pool.Query(ctx, `select `+userColumns+` from users u where u.status = 'active' order by u.name`)
+	rows, err := s.pool.Query(ctx, `select `+userColumns+` from users u
+		where u.status = 'active' and u.kind = 'member' order by u.name`)
 	if err != nil {
 		return nil, err
 	}

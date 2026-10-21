@@ -14,15 +14,17 @@ type Dashboard struct {
 	ChargeCount    int   `json:"charge_count"`
 }
 
-// DashboardStats agrega os indicadores do painel admin. Os valores financeiros
+// DashboardStats agrega os indicadores do painel admin. Contagens de usuários
+// são só de membros. Os valores financeiros
 // somam todos os lotes (mensalidade e partidas avulsas) do mês mais recente.
 func (s *Store) DashboardStats(ctx context.Context) (Dashboard, error) {
 	var d Dashboard
 	err := s.pool.QueryRow(ctx, `
 		select
-			(select count(*) from users where status = 'active'),
-			(select count(*) from users where status = 'inactive'),
-			(select count(distinct user_id) from charges where status = 'overdue'),
+			(select count(*) from users where status = 'active' and kind = 'member'),
+			(select count(*) from users where status = 'inactive' and kind = 'member'),
+			(select count(distinct c.user_id) from charges c join users u on u.id = c.user_id
+			  where c.status = 'overdue' and u.kind = 'member'),
 			(select count(*) from invites where used_at is null and revoked_at is null and expires_at > now())`).
 		Scan(&d.ActiveUsers, &d.InactiveUsers, &d.Delinquents, &d.PendingInvites)
 	if err != nil {
@@ -44,7 +46,7 @@ func (s *Store) DashboardStats(ctx context.Context) (Dashboard, error) {
 // DelinquentUsers lista usuários com cobrança vencida, para o card "Atenção".
 func (s *Store) DelinquentUsers(ctx context.Context) ([]Charge, error) {
 	rows, err := s.pool.Query(ctx,
-		`select `+chargeColumns+chargeJoins+` where c.status = 'overdue' order by c.due_date`)
+		`select `+chargeColumns+chargeJoins+` where c.status = 'overdue' and u.kind = 'member' order by c.due_date`)
 	if err != nil {
 		return nil, err
 	}
