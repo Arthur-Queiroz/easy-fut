@@ -1,8 +1,8 @@
 # Participação avulsa em partidas — desenho inicial
 
-**Status:** regras decididas em 2026-10-21 (seção "Decisões"); sem
-implementação. Onde o texto do desenho inicial divergir das decisões, valem
-as decisões.
+**Status:** regras decididas em 2026-10-21 (seção "Decisões"); fluxo
+implementado no branch `feat/participacao-avulsa`. Onde o texto do desenho
+inicial divergir das decisões, valem as decisões.
 
 ## Objetivo
 

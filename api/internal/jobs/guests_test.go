@@ -104,7 +104,7 @@ func TestExpireGuestBookingsJob(t *testing.T) {
 	old := book("11987650001", time.Now().Add(-31*time.Minute))
 	fresh := book("11987650002", time.Now())
 
-	New(st, nil).expireGuestBookings()
+	New(st, nil, "https://example.invalid").expireGuestBookings()
 
 	for id, want := range map[string]string{old: guests.StatusExpired, fresh: guests.StatusReserved} {
 		b, err := st.GuestBookingByID(ctx, id)

@@ -48,7 +48,7 @@ func main() {
 	}
 
 	if !cfg.DisableJobs {
-		runner := jobs.New(st, sender)
+		runner := jobs.New(st, sender, cfg.AppURL)
 		runner.ConfigurePush(push.New(cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject), cfg.MatchReminderHours)
 		runner.Start()
 		defer runner.Stop()

@@ -126,7 +126,7 @@ func (f guestVoteFixture) lastToken(t *testing.T) string {
 	return token
 }
 
-func publicRequest(s *Server, method, path, body string) *httptest.ResponseRecorder {
+func guestVoteRequest(s *Server, method, path, body string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
 	rec := httptest.NewRecorder()
 	s.Handler().ServeHTTP(rec, req)
@@ -178,7 +178,7 @@ func TestGuestVoteGet(t *testing.T) {
 	f.finish(t)
 	token := f.lastToken(t)
 
-	rec := publicRequest(f.s, "GET", "/api/public/guest-vote/"+token, "")
+	rec := guestVoteRequest(f.s, "GET", "/api/public/guest-vote/"+token, "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET: %d %s", rec.Code, rec.Body)
 	}
@@ -206,7 +206,7 @@ func TestGuestVoteGet(t *testing.T) {
 		t.Errorf("participantes = %v", view.Participants)
 	}
 
-	if rec := publicRequest(f.s, "GET", "/api/public/guest-vote/token-que-nao-existe", ""); rec.Code != http.StatusNotFound {
+	if rec := guestVoteRequest(f.s, "GET", "/api/public/guest-vote/token-que-nao-existe", ""); rec.Code != http.StatusNotFound {
 		t.Errorf("token inválido: %d", rec.Code)
 	}
 
@@ -214,7 +214,7 @@ func TestGuestVoteGet(t *testing.T) {
 	if _, err := f.raw.Exec(context.Background(), `update guest_vote_tokens set expires_at = now() - interval '1 minute'`); err != nil {
 		t.Fatal(err)
 	}
-	if rec := publicRequest(f.s, "GET", "/api/public/guest-vote/"+token, ""); rec.Code != http.StatusGone {
+	if rec := guestVoteRequest(f.s, "GET", "/api/public/guest-vote/"+token, ""); rec.Code != http.StatusGone {
 		t.Errorf("link vencido: %d", rec.Code)
 	}
 	if _, err := f.raw.Exec(context.Background(), `update guest_vote_tokens set expires_at = now() + interval '1 hour'`); err != nil {
@@ -224,7 +224,7 @@ func TestGuestVoteGet(t *testing.T) {
 	if rec := sessionRequest(t, f.s, "POST", "/api/matches/"+f.matchID+"/close-voting", "", f.admin); rec.Code != http.StatusOK {
 		t.Fatalf("fechar votação: %d", rec.Code)
 	}
-	if rec := publicRequest(f.s, "GET", "/api/public/guest-vote/"+token, ""); rec.Code != http.StatusGone {
+	if rec := guestVoteRequest(f.s, "GET", "/api/public/guest-vote/"+token, ""); rec.Code != http.StatusGone {
 		t.Errorf("votação encerrada: %d", rec.Code)
 	}
 }
@@ -235,7 +235,7 @@ func TestGuestVotePut(t *testing.T) {
 	f.finish(t)
 	token := f.lastToken(t)
 	put := func(body string) *httptest.ResponseRecorder {
-		return publicRequest(f.s, "PUT", "/api/public/guest-vote/"+token+"/votes", body)
+		return guestVoteRequest(f.s, "PUT", "/api/public/guest-vote/"+token+"/votes", body)
 	}
 	votes := func(ids ...string) string {
 		b, _ := json.Marshal(ids)
@@ -246,7 +246,7 @@ func TestGuestVotePut(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("voto válido: %d %s", rec.Code, rec.Body)
 	}
-	rec = publicRequest(f.s, "GET", "/api/public/guest-vote/"+token, "")
+	rec = guestVoteRequest(f.s, "GET", "/api/public/guest-vote/"+token, "")
 	var view guestVoteView
 	if err := json.NewDecoder(rec.Body).Decode(&view); err != nil {
 		t.Fatal(err)
@@ -284,7 +284,7 @@ func TestGuestVotePut(t *testing.T) {
 		}
 	}
 
-	if rec := publicRequest(f.s, "PUT", "/api/public/guest-vote/token-que-nao-existe/votes", `{"votes":{}}`); rec.Code != http.StatusNotFound {
+	if rec := guestVoteRequest(f.s, "PUT", "/api/public/guest-vote/token-que-nao-existe/votes", `{"votes":{}}`); rec.Code != http.StatusNotFound {
 		t.Errorf("token inválido: %d", rec.Code)
 	}
 
@@ -386,10 +386,10 @@ func TestResendGuestBookingMessage(t *testing.T) {
 	if newToken == oldToken || len(f.voteLinks(t, f.guest.ID)) != 2 {
 		t.Fatal("o reenvio não gerou um link novo")
 	}
-	if rec := publicRequest(f.s, "GET", "/api/public/guest-vote/"+oldToken, ""); rec.Code != http.StatusNotFound {
+	if rec := guestVoteRequest(f.s, "GET", "/api/public/guest-vote/"+oldToken, ""); rec.Code != http.StatusNotFound {
 		t.Errorf("token antigo: %d, want 404", rec.Code)
 	}
-	if rec := publicRequest(f.s, "GET", "/api/public/guest-vote/"+newToken, ""); rec.Code != http.StatusOK {
+	if rec := guestVoteRequest(f.s, "GET", "/api/public/guest-vote/"+newToken, ""); rec.Code != http.StatusOK {
 		t.Errorf("token novo: %d", rec.Code)
 	}
 }

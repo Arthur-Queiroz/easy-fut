@@ -140,12 +140,11 @@ Inadimplência: membro ativo com cobrança `overdue` há mais de
 `overdue_inactivate_days` dias (padrão 0) é inativado pelo cron. Ao pagar, é
 reativado automaticamente se não restar nada vencido.
 
-## Participação avulsa (fundação)
+## Participação avulsa
 
 Regras completas em `.agents/specs/design/2026-10-19-participacao-avulsa.md`
 (seção "Decisões"). Código: `api/internal/guests` (domínio) e
-`api/internal/store/guests.go` e `cash.go`. As rotas públicas, o Pix, o
-webhook, o cron e o voto por link chegam nas próximas fases.
+`api/internal/store/guests.go` e `cash.go`.
 
 - **Venda por partida** (`PUT /admin/matches/{id}/guest-sale`
   `{open, slots}`): o admin abre a venda com 0 a 100 vagas, só com a
@@ -171,6 +170,11 @@ webhook, o cron e o voto por link chegam nas próximas fases.
   futuro e vaga livre (`reserved + pending_payment + confirmed < vagas`),
   com a partida travada durante a contagem. Uma inscrição ativa por
   WhatsApp por partida. A reserva dura 30 minutos.
+- **Fluxo público:** `/public/guest-matches` mostra as vendas abertas;
+  `/public/guest-bookings` reserva a vaga e cria um Pix com o mesmo prazo.
+  O token de acompanhamento é devolvido uma vez, guardado só como hash e
+  exigido em `X-Booking-Token` na consulta da inscrição. O job expira as
+  reservas vencidas a cada minuto.
 - **Estados:** `reserved` → `pending_payment` → `confirmed`; `expired`
   (reserva vencida), `cancelled` (partida cancelada antes do pagamento),
   `refund_pending` → `refunded`. Transições fora da tabela do domínio são
@@ -181,6 +185,11 @@ webhook, o cron e o voto por link chegam nas próximas fases.
   cancelada), sempre reembolsa: `refund_pending`, sem vaga e sem mensagem,
   mas com a entrada no caixa, porque o dinheiro entrou. Webhook repetido não
   muda nada.
+- **Votação:** ao abrir a votação, o admin ou o job agenda um link privado
+  para cada avulso confirmado. A varredura do job cobre links que faltarem.
+  O token fica guardado só como hash, dá acesso apenas à partida da
+  inscrição e perde validade ao encerrar a votação. O reenvio pelo admin
+  revoga o link anterior.
 - **Partida cancelada:** confirmadas vão para `refund_pending`; reservas e
   pendentes, para `cancelled`.
 - **Reembolso** (`POST /admin/guest-bookings/{id}/refunded`): o admin
@@ -224,11 +233,10 @@ Tabela `settings` (chave/valor). Editadas em `/admin/configuracoes`:
 - `reminder_template`: mensagem do lembrete de cobrança que o admin envia
   manualmente por WhatsApp;
 - `pix_fee_bps`: taxa do Pix repassada, editada em porcentagem (0,99) e
-  validada de 0 a 19,99%; 0 desliga o repasse.
-
-Fora da tela por enquanto: `guest_price_cents` (padrão 2500), preço base da
-vaga avulsa em centavos, validado de 100 a 100000 e congelado na partida ao
-abrir a venda; valor inválido no banco vale como 2500.
+  validada de 0 a 19,99%; 0 desliga o repasse;
+- `guest_price_cents`: preço base da vaga avulsa em centavos (padrão 2500),
+  validado de 100 a 100000 e congelado na partida ao abrir a venda. Valor
+  inválido no banco vale como 2500.
 
 Fora da tela: `voting_open_delay_min` (padrão 0, minutos após o fim para a
 abertura automática da votação), `overdue_template` (lembrete automático de
