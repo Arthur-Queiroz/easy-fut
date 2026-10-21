@@ -151,6 +151,12 @@ func (s *Server) handleMercadoPagoWebhook(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusOK)
 		return
 	}
+	// Participação avulsa (fase A): orders de inscrição têm o prefixo
+	// "guest:"; as demais seguem o fluxo de cobrança abaixo, sem mudança.
+	if bookingID, ok := strings.CutPrefix(order.ExternalReference, guestOrderRefPrefix); ok {
+		s.handleGuestPaymentNotification(w, r, order, bookingID)
+		return
+	}
 
 	charge, err := s.store.ChargeByID(r.Context(), order.ExternalReference)
 	if errors.Is(err, store.ErrNotFound) {

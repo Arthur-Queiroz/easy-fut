@@ -24,6 +24,7 @@ type Server struct {
 	sender               notify.Sender
 	loginLimiter         *auth.LoginLimiter
 	passwordResetLimiter *auth.LoginLimiter
+	guestLimiters        guestPublicLimiters
 }
 
 func NewServer(cfg config.Config, st *store.Store, sender notify.Sender) *Server {
@@ -35,6 +36,7 @@ func NewServer(cfg config.Config, st *store.Store, sender notify.Sender) *Server
 		sender:               sender,
 		loginLimiter:         auth.NewLoginLimiter(10, 15*time.Minute),
 		passwordResetLimiter: auth.NewLoginLimiter(3, 15*time.Minute),
+		guestLimiters:        newGuestPublicLimiters(),
 	}
 }
 
@@ -54,6 +56,12 @@ func (s *Server) Handler() http.Handler {
 		r.Post("/password-reset/confirm", s.handlePasswordResetConfirm)
 		r.Post("/logout", s.handleLogout)
 		r.Post("/webhooks/mercadopago", s.handleMercadoPagoWebhook)
+
+		// Participação avulsa — público (fase A). Sem sessão; cada rota com
+		// limite próprio por IP (guest_public_handlers.go).
+		r.With(limitByIP(s.guestLimiters.list)).Get("/public/guest-matches", s.handlePublicGuestMatches)
+		r.With(limitByIP(s.guestLimiters.create)).Post("/public/guest-bookings", s.handleCreateGuestBooking)
+		r.With(limitByIP(s.guestLimiters.status)).Get("/public/guest-bookings/{id}", s.handleGetGuestBooking)
 
 		// Autenticado — acessível também a usuários inativos (consultar bloqueio e pagar)
 		r.Group(func(r chi.Router) {
