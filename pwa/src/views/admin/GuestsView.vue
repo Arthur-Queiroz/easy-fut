@@ -107,7 +107,9 @@ async function resend(b: AdminGuestBooking, kind: GuestMessageKind): Promise<boo
   try {
     await api.post(`/admin/guest-bookings/${b.id}/resend`, { kind })
     feedback.value[b.id] = {
-      ok: kind === 'confirmation' ? 'Confirmação reenviada.' : 'Novo link de voto enviado. O anterior não vale mais.',
+      ok: kind === 'confirmation'
+        ? 'Confirmação agendada. O envio pode levar até 5 minutos.'
+        : 'Novo link de voto agendado. O anterior não vale mais; o envio pode levar até 5 minutos.',
     }
     await load()
     return true
