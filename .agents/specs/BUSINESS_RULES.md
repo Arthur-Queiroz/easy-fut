@@ -98,7 +98,9 @@ Taxa do Pix repassada (`api/internal/billing`):
   valor individual com a taxa de `pix_fee_bps` (padrão 99 = 0,99%, a
   tarifa do Mercado Pago na conta).
 - **Valor cobrado:** o jogador vê e paga `pix_total_cents` (rateio + taxa),
-  e é esse total que vai no Pix.
+  e é esse total que vai no Pix. A taxa não é detalhada para o jogador, que
+  vê só o valor final; o detalhamento aparece só para o admin, que anuncia
+  no grupo o valor com a taxa (a prévia ao gerar o lote mostra esse valor).
 - **Cálculo:** o total é o menor valor que, descontada a tarifa (arredondada
   para cima no centavo), deixa o rateio inteiro para o grupo. Exemplo:
   R$ 60,00 → R$ 60,60.

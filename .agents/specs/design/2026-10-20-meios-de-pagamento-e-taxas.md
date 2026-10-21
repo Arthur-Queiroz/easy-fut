@@ -129,10 +129,10 @@ conferência ficando com o admin.
 - **Cartão (etapa 2): taxa no momento do pagamento.** É calculada sobre o
   rateio, e não sobre o total do Pix, e mostrada antes de pagar.
 
-O jogador vê o detalhamento na cobrança:
-
-> Mensalidade de outubro: **R$ 60,00** · taxa do Pix: **R$ 0,60** ·
-> total: **R$ 60,60**
+O jogador vê só o valor final (**R$ 60,60**), sem detalhamento. O admin
+anuncia no grupo o valor já com a taxa (a prévia ao gerar o lote mostra
+esse valor), e o detalhamento (rateio, taxa e total) aparece só nas telas do
+admin.
 
 Para o grupo receber exatamente o valor do rateio, a taxa incide sobre o
 total, e não sobre a base:
@@ -194,7 +194,8 @@ Uma diferença nunca é cobrada de volta do pagador.
   repassar a taxa do cartão é prática abusiva pelo CDC.
 - Aqui o caso é um rateio de despesa entre membros de um grupo fechado, e
   não venda ao consumidor, mas vale manter a prática transparente:
-  - a taxa aparece separada antes do pagamento;
+  - o valor final é anunciado e mostrado antes do pagamento (por decisão
+    do grupo, sem a taxa separada);
   - existe sempre uma opção sem taxa (baixa manual).
 - Não é parecer jurídico. Se o grupo virar PJ, revisar.
 
@@ -251,6 +252,8 @@ Tomadas em 2026-10-20:
   pagamentos anteriores. Esse é o padrão de `pix_fee_bps` (99).
 - A **taxa do Pix é repassada** ao pagador e somada automaticamente ao
   valor da mensalidade.
+- (2026-10-21) O jogador **não vê a taxa separada**, só o valor final; o
+  admin anuncia o valor com a taxa no grupo.
 
 Pendentes:
 

@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { api, errorMessage } from '../../api/client'
 import type { Charge } from '../../api/types'
 import { formatCents, formatDateShort, formatDMY, formatMonth } from '../../lib/format'
-import { hasPixFee, paidCents, payableCents } from '../../lib/charges'
+import { paidCents, payableCents } from '../../lib/charges'
 import { safeUrl } from '../../lib/security'
 import MobileShell from '../../components/layout/MobileShell.vue'
 import NavIcon from '../../components/layout/NavIcon.vue'
@@ -116,10 +116,6 @@ function statusBadge(charge: Charge): { tone: 'success' | 'warn' | 'danger' | 'n
               </div>
               <div class="flex flex-1 flex-col gap-1 lg:gap-1.5">
                 <div class="font-condensed text-[34px] font-bold leading-none lg:text-[42px]">{{ formatCents(payableCents(charge)) }}</div>
-                <div v-if="hasPixFee(charge)" class="text-[12px] text-ink2" data-test="pix-fee">
-                  {{ charge.batch_kind === 'monthly' ? 'Mensalidade' : 'Rateio' }} {{ formatCents(charge.amount_cents) }}
-                  + taxa do Pix {{ formatCents(charge.pix_fee_cents) }}
-                </div>
                 <div class="text-[13px] text-ink2 lg:text-[13.5px]">
                   Vence <strong :class="charge.status === 'overdue' ? 'text-danger' : 'text-warn'">{{ formatDateShort(charge.due_date) }}</strong>
                   <template v-if="charge.batch_kind === 'monthly'"><br />5º dia útil após a geração</template>

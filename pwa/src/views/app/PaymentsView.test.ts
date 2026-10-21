@@ -24,21 +24,21 @@ const text = (el: { text(): string }) => el.text().replace(/\u00a0/g, ' ')
 beforeEach(() => vi.clearAllMocks())
 
 describe('pagamentos do jogador', () => {
-  it('mostra o total no Pix com o detalhamento da taxa', async () => {
+  // A taxa do Pix é repassada sem aparecer: o jogador vê só o valor final.
+  it('mostra só o total no Pix, sem detalhar a taxa', async () => {
     mocks.get.mockResolvedValue({ data: [charge('c1', 'pending', 60)] })
     const w = mountView()
     await flushPromises()
     expect(text(w)).toContain('R$ 60,60')
-    expect(text(w.find('[data-test="pix-fee"]'))).toContain('R$ 60,00')
-    expect(text(w.find('[data-test="pix-fee"]'))).toContain('taxa do Pix R$ 0,60')
+    expect(text(w)).not.toContain('R$ 60,00')
+    expect(text(w).toLowerCase()).not.toContain('taxa')
   })
 
-  it('cobrança antiga, sem taxa, não mostra detalhamento', async () => {
+  it('cobrança antiga, sem taxa, mostra o rateio', async () => {
     mocks.get.mockResolvedValue({ data: [charge('c1', 'pending', 0)] })
     const w = mountView()
     await flushPromises()
     expect(text(w)).toContain('R$ 60,00')
-    expect(w.find('[data-test="pix-fee"]').exists()).toBe(false)
   })
 
   it('no histórico, Pix pago mostra o total e baixa manual só o rateio', async () => {

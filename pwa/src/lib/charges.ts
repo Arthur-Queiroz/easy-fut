@@ -1,5 +1,6 @@
 // Valores de cobrança mostrados na PWA. A taxa do Pix é calculada e
 // congelada pela API ao gerar o lote; aqui só se escolhe qual valor exibir.
+// O jogador vê só o valor final: a taxa não é detalhada para ele, só para o admin.
 import type { Charge } from '../api/types'
 
 type ChargeValues = Pick<Charge, 'status' | 'amount_cents' | 'pix_fee_cents' | 'pix_total_cents'>
@@ -12,11 +13,6 @@ export function payableCents(c: ChargeValues): number {
 /** Valor pago: Pix pelo Mercado Pago inclui a taxa; baixa manual registra só o rateio. */
 export function paidCents(c: ChargeValues): number {
   return c.status === 'paid' ? c.pix_total_cents : c.amount_cents
-}
-
-/** Cobranças geradas antes do repasse têm taxa 0 e não mostram detalhamento. */
-export function hasPixFee(c: ChargeValues): boolean {
-  return c.pix_fee_cents > 0
 }
 
 /** Configuração pix_fee_bps (99) → texto da tela (0,99). */

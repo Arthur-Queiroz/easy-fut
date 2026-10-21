@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ChargeStatus } from '../api/types'
-import { feePercentToBasisPoints, formatBasisPoints, hasPixFee, paidCents, payableCents } from './charges'
+import { feePercentToBasisPoints, formatBasisPoints, paidCents, payableCents } from './charges'
 
 const charge = (status: ChargeStatus, fee = 60) => ({ status, amount_cents: 6000, pix_fee_cents: fee, pix_total_cents: 6000 + fee })
 
@@ -15,10 +15,6 @@ describe('valores da cobrança', () => {
     expect(paidCents(charge('manual_paid'))).toBe(6000)
   })
 
-  it('cobrança antiga, sem taxa, não mostra detalhamento', () => {
-    expect(hasPixFee(charge('pending'))).toBe(true)
-    expect(hasPixFee(charge('pending', 0))).toBe(false)
-  })
 })
 
 describe('taxa nas configurações', () => {
