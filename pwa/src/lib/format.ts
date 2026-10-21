@@ -89,6 +89,15 @@ export function countdown(ts: string): string | null {
   return `${hours}h${pad(minutes)}`
 }
 
+/** Tempo restante até um timestamp em 'mm:ss' (ou 'h:mm:ss'); '00:00' se já passou. */
+export function formatRemaining(ts: string, now: number = Date.now()): string {
+  const total = Math.max(0, Math.floor((new Date(ts).getTime() - now) / 1000))
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const seconds = total % 60
+  return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`
+}
+
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/)
   const first = parts[0]?.[0] ?? ''

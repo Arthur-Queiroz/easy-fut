@@ -10,6 +10,10 @@ export const router = createRouter({
     { path: '/login', name: 'login', component: () => import('../views/auth/LoginView.vue'), meta: { public: true } },
     { path: '/esqueci-minha-senha', name: 'forgot-password', component: () => import('../views/auth/ForgotPasswordView.vue'), meta: { public: true } },
     { path: '/redefinir-senha', name: 'reset-password', component: () => import('../views/auth/ResetPasswordView.vue'), meta: { public: true } },
+    // Participação avulsa (sem login)
+    { path: '/avulso', name: 'guest-matches', component: () => import('../views/guest/GuestMatchesView.vue'), meta: { public: true } },
+    { path: '/avulso/inscricao/:id', name: 'guest-booking', component: () => import('../views/guest/GuestBookingView.vue'), meta: { public: true } },
+    { path: '/votar/:token', name: 'guest-vote', component: () => import('../views/guest/GuestVoteView.vue'), meta: { public: true } },
     { path: '/bloqueado', name: 'blocked', component: () => import('../views/app/BlockedView.vue') },
 
     // Painel do usuário

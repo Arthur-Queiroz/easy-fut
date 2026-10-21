@@ -7,13 +7,15 @@ src/
   stores/               Pinia: auth (usuário logado), theme (claro/escuro)
   api/client.ts         instância Axios (baseURL /api) + errorMessage()
   api/types.ts          tipos espelhando o JSON da API Go
+  api/publicGuests.ts   endpoints públicos do avulso (tipos, chamadas, token da inscrição)
   components/
     ui/                 Card, Badge, Avatar, BaseButton, Modal, EmptyState, SearchSelect…
-    layout/             MobileShell (app), AdminLayout, BottomNav, TopNav, NavIcon
+    layout/             MobileShell (app), AdminLayout, PublicShell (avulso), BottomNav, TopNav, NavIcon
     pwa/                InstallPrompt, PushSettings
     admin/              componentes exclusivos do admin (sorteio, gráficos de votos)
   views/
     auth/               convite, cadastro, login, recuperação de senha
+    guest/              avulso, sem login: partidas e inscrição, acompanhamento do Pix, voto por link
     app/                início, partida, times, pagamentos, histórico, perfil, bloqueado
     admin/              painel, partidas, usuários, mensalidades, convites, avisos, configurações
   lib/
@@ -22,6 +24,7 @@ src/
     push.ts             inscrição Web Push
     search.ts           normalização de busca (sem acento) e tipo das opções de SearchSelect
     votes.ts            cálculos do dashboard de votos (barras, filtros, participação)
+    voteDraft.ts        rascunho de votos da página do avulso (diff das categorias alteradas)
 public/push-sw.js       handler de push importado pelo service worker gerado
 design/design/          mockups e tokens originais (referência visual)
 ```
@@ -36,6 +39,12 @@ design/design/          mockups e tokens originais (referência visual)
 - O interceptor do Axios repete essa regra para respostas da API: `401` vai
   para o login (preservando o destino) e `403` com `code: "inactive"` vai
   para `/bloqueado`. Não trate esses casos de novo em cada view.
+- Rotas públicas do avulso (sem sessão, layout `PublicShell`, sem bottom nav):
+  `/avulso` (partidas com venda aberta e formulário), `/avulso/inscricao/:id`
+  (Pix e status, com polling de 5 s; o `access_token` fica no `localStorage`
+  em `easyfut-guest-bookings` e vai no header `X-Booking-Token`) e
+  `/votar/:token` (voto pelo link do WhatsApp). A entrada é o link "Jogar uma
+  partida avulsa" no login.
 
 ## Dados
 
