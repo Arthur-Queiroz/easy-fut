@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -51,6 +52,12 @@ func newFakeMercadoPago(t *testing.T) *fakeMercadoPago {
 			var body map[string]any
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 				t.Error(err)
+			}
+			ref, _ := body["external_reference"].(string)
+			if valid, _ := regexp.MatchString(`^[A-Za-z0-9_-]{1,64}$`, ref); !valid {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"error":"property_value"}`))
+				return
 			}
 			f.created = append(f.created, body)
 			id := fmt.Sprintf("ORDTEST%d", len(f.created))
@@ -274,7 +281,7 @@ func TestCreateGuestBookingHandler(t *testing.T) {
 	order := bodies[0]
 	payer := order["payer"].(map[string]any)
 	payment := order["transactions"].(map[string]any)["payments"].([]any)[0].(map[string]any)
-	if order["external_reference"] != "guest:"+b.BookingID || order["total_amount"] != "25.25" ||
+	if order["external_reference"] != "guest_"+b.BookingID || order["total_amount"] != "25.25" ||
 		payer["email"] != "ze@example.com" || payer["first_name"] != "Zé Avulso" ||
 		payment["expiration_time"] != "PT0H30M" {
 		t.Errorf("order enviada = %v", order)
@@ -483,7 +490,7 @@ func TestWebhookConfirmsGuestBooking(t *testing.T) {
 	}
 
 	// Ainda aguardando: só atualiza o estado do provedor.
-	mp.setOrder("ORDTEST1", "guest:"+b.BookingID, false)
+	mp.setOrder("ORDTEST1", "guest_"+b.BookingID, false)
 	if rec := signedWebhook(t, s, "ORDTEST1"); rec.Code != http.StatusOK {
 		t.Fatalf("webhook pendente: %d %s", rec.Code, rec.Body)
 	}
@@ -491,7 +498,7 @@ func TestWebhookConfirmsGuestBooking(t *testing.T) {
 		t.Errorf("antes do pagamento = %s", st)
 	}
 
-	mp.setOrder("ORDTEST1", "guest:"+b.BookingID, true)
+	mp.setOrder("ORDTEST1", "guest_"+b.BookingID, true)
 	for i := range 2 {
 		if rec := signedWebhook(t, s, "ORDTEST1"); rec.Code != http.StatusOK {
 			t.Fatalf("webhook aprovado #%d: %d %s", i+1, rec.Code, rec.Body)
@@ -531,6 +538,20 @@ func TestWebhookConfirmsGuestBooking(t *testing.T) {
 	}
 }
 
+func TestWebhookAcceptsLegacyGuestReference(t *testing.T) {
+	s, raw, mp := guestPublicServer(t)
+	m := openSaleMatch(t, s, raw, 1)
+	b := mustCreateBooking(t, s, m.ID, "11987650001")
+
+	mp.setOrder("ORDTEST1", "guest:"+b.BookingID, true)
+	if rec := signedWebhook(t, s, "ORDTEST1"); rec.Code != http.StatusOK {
+		t.Fatalf("webhook legado: %d %s", rec.Code, rec.Body)
+	}
+	if st := bookingStatus(t, raw, b.BookingID); st != guests.StatusConfirmed {
+		t.Errorf("inscrição = %s, want confirmed", st)
+	}
+}
+
 // Order de inscrição desconhecida ou que não bate com a inscrição é ignorada
 // sem erro (o Mercado Pago não deve reenviar para sempre).
 func TestWebhookIgnoresUnknownGuestOrders(t *testing.T) {
@@ -538,9 +559,9 @@ func TestWebhookIgnoresUnknownGuestOrders(t *testing.T) {
 	m := openSaleMatch(t, s, raw, 2)
 	b := mustCreateBooking(t, s, m.ID, "11987650001")
 
-	mp.setOrder("ORDOUTRA", "guest:"+b.BookingID, true) // order que não é a da inscrição
-	mp.setOrder("ORDSUMIU", "guest:00000000-0000-0000-0000-000000000000", true)
-	mp.setOrder("ORDLIXO", "guest:nao-e-uuid", true)
+	mp.setOrder("ORDOUTRA", "guest_"+b.BookingID, true) // order que não é a da inscrição
+	mp.setOrder("ORDSUMIU", "guest_00000000-0000-0000-0000-000000000000", true)
+	mp.setOrder("ORDLIXO", "guest_nao-e-uuid", true)
 	for _, id := range []string{"ORDOUTRA", "ORDSUMIU", "ORDLIXO"} {
 		if rec := signedWebhook(t, s, id); rec.Code != http.StatusOK {
 			t.Errorf("%s: %d %s", id, rec.Code, rec.Body)

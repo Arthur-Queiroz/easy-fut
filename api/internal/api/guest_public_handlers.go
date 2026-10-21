@@ -28,10 +28,12 @@ import (
 
 const (
 	// guestOrderRefPrefix marca no external_reference do Mercado Pago as
-	// orders de inscrição avulsa ("guest:<booking_id>"); sem o prefixo, a
+	// orders de inscrição avulsa ("guest_<booking_id>"); sem o prefixo, a
 	// order é de uma cobrança de membro.
-	guestOrderRefPrefix = "guest:"
-	bookingTokenHeader  = "X-Booking-Token"
+	guestOrderRefPrefix = "guest_"
+	// Aceita notificações de orders criadas antes da correção do prefixo.
+	legacyGuestOrderRefPrefix = "guest:"
+	bookingTokenHeader        = "X-Booking-Token"
 )
 
 // Limites por IP dos endpoints públicos (janela deslizante, em memória, como
