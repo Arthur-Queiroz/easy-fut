@@ -147,9 +147,24 @@ Regras completas em `.agents/specs/design/2026-10-19-participacao-avulsa.md`
 `api/internal/store/guests.go` e `cash.go`. As rotas públicas, o Pix, o
 webhook, o cron e o voto por link chegam nas próximas fases.
 
-- **Venda por partida:** o admin abre a venda com um número de vagas; ao
-  abrir, congela `guest_price_cents` (configuração, padrão 2500) e o total
-  com a taxa do Pix embutida (`billing.DefaultPixRate.PassOn`: 2500 → 2525).
+- **Venda por partida** (`PUT /admin/matches/{id}/guest-sale`
+  `{open, slots}`): o admin abre a venda com 0 a 100 vagas, só com a
+  partida `open` e o prazo de confirmação no futuro (senão `409`), e nunca
+  com menos vagas que as inscrições que ocupam vaga (`confirmed` e reservas
+  ainda válidas; `409`). Ao abrir uma venda fechada, congela
+  `guest_price_cents` (configuração, padrão 2500) e o total com a taxa do
+  Pix vigente embutida (`pix_fee_bps`, a mesma do repasse das
+  mensalidades: 2500 → 2525 com 0,99%). Com a venda já aberta, o admin só
+  reajusta as vagas e o preço não muda. Fechar mantém vagas, preço e total;
+  reabrir congela o preço vigente de novo. A partida expõe
+  `guest_sale_open`, `guest_slots`, `guest_price_cents`,
+  `guest_total_cents`, `guest_confirmed_count` e `guest_pending_count`
+  (`reserved` + `pending_payment`).
+- **Tela Avulsos** (`GET /admin/guest-bookings?match_id=&status=&q=`):
+  inscrições mais recentes primeiro, com a partida e a última entrega de
+  cada WhatsApp (confirmação e link de voto). `q` busca no nome (sem
+  diferenciar maiúsculas) ou no telefone: celular completo em qualquer
+  formatação é normalizado; só dígitos procuram um trecho do número.
 - **Inscrição:** nome, WhatsApp (celular brasileiro, guardado em E.164) e
   e-mail (fica na inscrição, não em `users`). Cada compra cria um avulso
   novo. Só com a venda aberta, partida `open`, prazo de confirmação no
@@ -168,10 +183,18 @@ webhook, o cron e o voto por link chegam nas próximas fases.
   muda nada.
 - **Partida cancelada:** confirmadas vão para `refund_pending`; reservas e
   pendentes, para `cancelled`.
-- **Caixa** (`cash_entries`): entradas de inscrição (valor base, com a taxa
-  em `fee_cents`), estornos e despesas lançadas pelo admin. Valor sempre
-  positivo, o sinal vem do tipo; o saldo soma o caixa inteiro. Só despesas
-  podem ser removidas. Não se mistura com as mensalidades.
+- **Reembolso** (`POST /admin/guest-bookings/{id}/refunded`): o admin
+  estorna o Pix no Mercado Pago e marca aqui. Só de `refund_pending`
+  (`409` nos demais); grava `refunded` e, na mesma transação, lança no
+  caixa a saída `refund` com o valor e a taxa da entrada da inscrição (sem
+  entrada, sem saída). Repetir a marcação não muda nada.
+- **Caixa** (`cash_entries`; `GET /admin/cash?from=&to=`): entradas de
+  inscrição (valor base, com a taxa em `fee_cents`), estornos e despesas
+  lançadas pelo admin (`POST /admin/cash/expenses` com descrição de até 120
+  caracteres, valor positivo e data `YYYY-MM-DD`). Valor sempre positivo, o
+  sinal vem do tipo; o saldo soma o caixa inteiro e o período (datas
+  inclusivas) filtra só a lista. Só despesas podem ser removidas
+  (`DELETE /admin/cash/expenses/{id}`). Não se mistura com as mensalidades.
 
 ## Notificações
 
@@ -204,7 +227,8 @@ Tabela `settings` (chave/valor). Editadas em `/admin/configuracoes`:
   validada de 0 a 19,99%; 0 desliga o repasse.
 
 Fora da tela por enquanto: `guest_price_cents` (padrão 2500), preço base da
-vaga avulsa, congelado na partida ao abrir a venda.
+vaga avulsa em centavos, validado de 100 a 100000 e congelado na partida ao
+abrir a venda; valor inválido no banco vale como 2500.
 
 Fora da tela: `voting_open_delay_min` (padrão 0, minutos após o fim para a
 abertura automática da votação), `overdue_template` (lembrete automático de

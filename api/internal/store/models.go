@@ -53,6 +53,14 @@ type Match struct {
 	NotGoingCount   int `json:"not_going_count"`
 	NoResponseCount int `json:"no_response_count"`
 	MediaCount      int `json:"media_count"`
+
+	// Venda de vagas avulsas: preço e total congelados ao abrir a venda.
+	GuestSaleOpen       bool  `json:"guest_sale_open"`
+	GuestSlots          int   `json:"guest_slots"`
+	GuestPriceCents     int64 `json:"guest_price_cents"`
+	GuestTotalCents     int64 `json:"guest_total_cents"`
+	GuestConfirmedCount int   `json:"guest_confirmed_count"` // inscrições confirmed
+	GuestPendingCount   int   `json:"guest_pending_count"`   // reserved + pending_payment
 }
 
 type ConfirmationEntry struct {
@@ -195,7 +203,7 @@ type CashEntry struct {
 	Kind          string    `json:"kind"` // guest_payment, refund, expense
 	AmountCents   int64     `json:"amount_cents"`
 	FeeCents      int64     `json:"fee_cents"`
-	BookingID     *string   `json:"booking_id,omitempty"`
+	BookingID     *string   `json:"booking_id"` // nulo em despesa
 	Description   string    `json:"description"`
 	OccurredOn    string    `json:"occurred_on"` // YYYY-MM-DD
 	CreatedBy     *string   `json:"created_by,omitempty"`

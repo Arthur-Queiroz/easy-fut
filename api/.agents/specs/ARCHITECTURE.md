@@ -56,7 +56,8 @@ camada.
 Migração em andamento: a votação já está em `matches`, a taxa do Pix em
 `billing` e a participação avulsa nasceu em `guests` (formulário,
 `CheckSaleOpen`, transições, `OnPaymentApproved`, `OnMatchCancelled`,
-despesas do caixa). As demais regras (rateio, inadimplência, transições de partida,
+despesas do caixa; e, para o admin, `CheckSaleOpening`, `ParsePrice` e
+`CheckRefund`). As demais regras (rateio, inadimplência, transições de partida,
 convites) ainda estão nos handlers e no SQL. Ao mexer numa delas, prefira migrá-la seguindo o ADR.
 
 Não introduza ORM, `sqlc`, injeção de dependência ou repositórios genéricos

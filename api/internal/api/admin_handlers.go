@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"futdarapaziada/api/internal/billing"
+	"futdarapaziada/api/internal/guests"
 	"futdarapaziada/api/internal/notify"
 	"futdarapaziada/api/internal/store"
 )
@@ -222,6 +223,11 @@ func (s *Server) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 func validateSettings(settings map[string]string) error {
 	if raw, ok := settings["pix_fee_bps"]; ok {
 		if _, err := billing.ParseBasisPoints(raw); err != nil {
+			return err
+		}
+	}
+	if raw, ok := settings["guest_price_cents"]; ok {
+		if _, err := guests.ParsePrice(raw); err != nil {
 			return err
 		}
 	}

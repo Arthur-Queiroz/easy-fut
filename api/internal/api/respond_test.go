@@ -57,6 +57,11 @@ func TestWriteStoreErrorGuestsContract(t *testing.T) {
 		{guests.ErrInvalidEmail, http.StatusBadRequest},
 		{guests.ErrInvalidName, http.StatusBadRequest},
 		{guests.ErrInvalidExpense, http.StatusBadRequest},
+		// Fase B: ações do admin.
+		{guests.ErrInvalidSlots, http.StatusBadRequest},
+		{guests.ErrInvalidPrice, http.StatusBadRequest},
+		{guests.ErrMatchNotOpen, http.StatusConflict},
+		{guests.ErrSlotsBelowBooked, http.StatusConflict},
 	}
 	for _, tc := range cases {
 		rec := httptest.NewRecorder()

@@ -150,6 +150,14 @@ func (s *Server) Handler() http.Handler {
 			r.Get("/admin/push/recipients", s.handleListPushRecipients)
 			r.Get("/admin/push/broadcasts", s.handleListPushBroadcasts)
 			r.Post("/admin/push/broadcasts", s.handleCreatePushBroadcast)
+
+			// Participação avulsa — admin (fase B)
+			r.Put("/admin/matches/{id}/guest-sale", s.handleGuestSale)
+			r.Get("/admin/guest-bookings", s.handleListGuestBookings)
+			r.Post("/admin/guest-bookings/{id}/refunded", s.handleGuestRefunded)
+			r.Get("/admin/cash", s.handleCash)
+			r.Post("/admin/cash/expenses", s.handleAddCashExpense)
+			r.Delete("/admin/cash/expenses/{id}", s.handleDeleteCashExpense)
 		})
 	})
 

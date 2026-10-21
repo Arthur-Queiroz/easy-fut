@@ -15,14 +15,19 @@ const matchColumns = `
 	(select count(*) from match_confirmations c where c.match_id = m.id and c.response = 'going'),
 	(select count(*) from match_confirmations c where c.match_id = m.id and c.response = 'not_going'),
 	(select count(*) from match_confirmations c where c.match_id = m.id and c.response = 'no_response'),
-	(select count(*) from match_media md where md.match_id = m.id and md.status = 'visible')`
+	(select count(*) from match_media md where md.match_id = m.id and md.status = 'visible'),
+	m.guest_sale_open, m.guest_slots, m.guest_price_cents, m.guest_total_cents,
+	(select count(*) from guest_bookings g where g.match_id = m.id and g.status = 'confirmed'),
+	(select count(*) from guest_bookings g where g.match_id = m.id and g.status in ('reserved', 'pending_payment'))`
 
 func scanMatch(row pgx.Row) (Match, error) {
 	var m Match
 	err := row.Scan(&m.ID, &m.MatchDate, &m.StartTime, &m.EndTime, &m.Venue, &m.Address,
 		&m.ConfirmationDeadline, &m.Status, &m.CancelReason, &m.Notes,
 		&m.VotingClosesAt, &m.FinishedAt, &m.CreatedAt,
-		&m.GoingCount, &m.NotGoingCount, &m.NoResponseCount, &m.MediaCount)
+		&m.GoingCount, &m.NotGoingCount, &m.NoResponseCount, &m.MediaCount,
+		&m.GuestSaleOpen, &m.GuestSlots, &m.GuestPriceCents, &m.GuestTotalCents,
+		&m.GuestConfirmedCount, &m.GuestPendingCount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return m, ErrNotFound
 	}
