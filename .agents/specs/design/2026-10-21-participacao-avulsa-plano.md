@@ -90,7 +90,7 @@ login):
 Comportamento da criação de inscrição (`POST /api/public/guest-bookings`):
 - **Uma transação:** com lock da partida, checa venda e vagas, cria o
   avulso e cria a inscrição com `expires_at = now + 30 min`.
-- **Pix:** gera o Pix com `external_reference = "guest:<booking_id>"` e
+- **Pix:** gera o Pix com `external_reference = "guest_<booking_id>"` e
   expiração de 30 min, e marca a inscrição como `pending_payment`.
 - **Token de acompanhamento:** o `access_token` serve para acompanhar a
   inscrição. É devolvido uma vez e guardado só como hash.
@@ -109,7 +109,7 @@ Comportamento da criação de inscrição (`POST /api/public/guest-bookings`):
 | `DELETE /api/admin/cash/expenses/{id}` | remove despesa lançada por engano |
 
 **Integração com o que existe:**
-- **Webhook do Mercado Pago:** `external_reference` com prefixo `guest:`
+- **Webhook do Mercado Pago:** `external_reference` com prefixo `guest_`
   vai para o fluxo de inscrição; sem prefixo, segue o fluxo atual de
   cobrança.
 - **Aprovação do pagamento:** na mesma transação, grava `going` em
