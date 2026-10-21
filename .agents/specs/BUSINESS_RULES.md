@@ -14,6 +14,22 @@ este arquivo no mesmo PR.
 - Rotas `/admin/*` e as ações administrativas de partida exigem
   `requireAdmin`.
 - Convite vale uma vez: inválido se usado, revogado ou expirado.
+- Usuários têm um tipo (`users.kind`): `member` (membro do grupo) ou
+  `guest` (avulso, quem comprou uma vaga numa partida). **Avulso não tem
+  conta:** fica sem e-mail e sem senha em `users`, nunca é admin (check no
+  banco), e login, cadastro por convite, recuperação de senha,
+  `requireAuth` e `requireActive` o recusam. O admin não muda perfil nem
+  status de um avulso (`409`); corrigir nome e telefone continua possível.
+
+### Isolamento dos membros
+
+Tudo que fala do grupo considera só `kind = 'member'`: `ActiveUsers` e o
+rateio da mensalidade, os participantes de cobrança de partida, as
+confirmações iniciais da partida criada e das recorrentes, o push de partida
+(criação, lembrete e envio), os avisos manuais (destinatários, fila e envio),
+os números do painel, a inadimplência (inativação e reativação) e a lista
+`/admin/users`, que aceita `?kind=member|guest` com `member` como padrão,
+inclusive na contagem e na paginação.
 
 ## Partidas
 
@@ -28,8 +44,8 @@ Estados (`matches.status`):
 | `voting`                | `finished`    | cron ao fim de `voting_closes_at`, ou admin |
 | qualquer, exceto `finished`/`cancelled` | `cancelled` | admin, com motivo  |
 
-- Ao criar a partida, todos os usuários ativos recebem uma confirmação
-  `no_response`.
+- Ao criar a partida, todos os membros ativos recebem uma confirmação
+  `no_response`. Avulsos entram na presença (`going`) só ao pagar a vaga.
 - Confirmação só é aceita com a partida `open`; o cron fecha as vencidas a
   cada minuto.
 - Sorteio só depois do fechamento: embaralha os confirmados e distribui em
@@ -51,7 +67,7 @@ Estados (`matches.status`):
   (`recurring_id + match_date`). Dia e horários do template são de São
   Paulo. Uma partida gerada pode ser editada sem afetar o template; excluir
   o template mantém as partidas.
-- No mesmo job, todo usuário ativo ganha confirmação `no_response` nas
+- No mesmo job, todo membro ativo ganha confirmação `no_response` nas
   partidas recorrentes abertas (inclusive quem virou ativo depois da
   geração), o que habilita o lembrete por push. Não há push de "partida
   criada" para recorrentes.
@@ -120,19 +136,53 @@ Estados (`charges.status`):
 - `pending`/`overdue` → `cancelled` ou `exempt`: ação do admin.
 - Um lote só pode ser excluído se nenhuma cobrança dele estiver paga.
 
-Inadimplência: usuário ativo com cobrança `overdue` há mais de
+Inadimplência: membro ativo com cobrança `overdue` há mais de
 `overdue_inactivate_days` dias (padrão 0) é inativado pelo cron. Ao pagar, é
 reativado automaticamente se não restar nada vencido.
+
+## Participação avulsa (fundação)
+
+Regras completas em `.agents/specs/design/2026-10-19-participacao-avulsa.md`
+(seção "Decisões"). Código: `api/internal/guests` (domínio) e
+`api/internal/store/guests.go` e `cash.go`. As rotas públicas, o Pix, o
+webhook, o cron e o voto por link chegam nas próximas fases.
+
+- **Venda por partida:** o admin abre a venda com um número de vagas; ao
+  abrir, congela `guest_price_cents` (configuração, padrão 2500) e o total
+  com a taxa do Pix embutida (`billing.DefaultPixRate.PassOn`: 2500 → 2525).
+- **Inscrição:** nome, WhatsApp (celular brasileiro, guardado em E.164) e
+  e-mail (fica na inscrição, não em `users`). Cada compra cria um avulso
+  novo. Só com a venda aberta, partida `open`, prazo de confirmação no
+  futuro e vaga livre (`reserved + pending_payment + confirmed < vagas`),
+  com a partida travada durante a contagem. Uma inscrição ativa por
+  WhatsApp por partida. A reserva dura 30 minutos.
+- **Estados:** `reserved` → `pending_payment` → `confirmed`; `expired`
+  (reserva vencida), `cancelled` (partida cancelada antes do pagamento),
+  `refund_pending` → `refunded`. Transições fora da tabela do domínio são
+  recusadas.
+- **Pagamento aprovado:** com a reserva válida, `confirmed`: grava `going`
+  na presença, lança a entrada no caixa e agenda uma única vez o WhatsApp de
+  confirmação. Depois do prazo (ou com a inscrição já expirada ou
+  cancelada), sempre reembolsa: `refund_pending`, sem vaga e sem mensagem,
+  mas com a entrada no caixa, porque o dinheiro entrou. Webhook repetido não
+  muda nada.
+- **Partida cancelada:** confirmadas vão para `refund_pending`; reservas e
+  pendentes, para `cancelled`.
+- **Caixa** (`cash_entries`): entradas de inscrição (valor base, com a taxa
+  em `fee_cents`), estornos e despesas lançadas pelo admin. Valor sempre
+  positivo, o sinal vem do tipo; o saldo soma o caixa inteiro. Só despesas
+  podem ser removidas. Não se mistura com as mensalidades.
 
 ## Notificações
 
 - **Push de partida:** aviso na criação (fila gravada na mesma transação) e
   lembrete na janela de `MATCH_REMINDER_HOURS` (padrão 2; `0` desliga) antes
-  do prazo, só para ativos que não responderam. Worker a cada minuto, um
+  do prazo, só para membros ativos que não responderam. Worker a cada minuto, um
   envio por aparelho/partida/tipo, até cinco tentativas com backoff, lease de
   dois minutos. HTTP 404/410 remove a inscrição.
 - **Avisos manuais:** até 240 caracteres (título opcional até 60), para todos
-  os ativos ou membros escolhidos (inativos permitidos, arquivados nunca).
+  os membros ativos ou membros escolhidos (inativos permitidos, arquivados
+  e avulsos nunca).
   Aviso sem nenhum aparelho de destino é recusado; não entregue em 24 h é
   descartado.
 - Um aparelho fica inscrito em uma conta por vez; logout remove a inscrição.
@@ -152,6 +202,9 @@ Tabela `settings` (chave/valor). Editadas em `/admin/configuracoes`:
   manualmente por WhatsApp;
 - `pix_fee_bps`: taxa do Pix repassada, editada em porcentagem (0,99) e
   validada de 0 a 19,99%; 0 desliga o repasse.
+
+Fora da tela por enquanto: `guest_price_cents` (padrão 2500), preço base da
+vaga avulsa, congelado na partida ao abrir a venda.
 
 Fora da tela: `voting_open_delay_min` (padrão 0, minutos após o fim para a
 abertura automática da votação), `overdue_template` (lembrete automático de

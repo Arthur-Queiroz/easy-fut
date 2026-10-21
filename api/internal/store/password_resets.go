@@ -9,6 +9,7 @@ import (
 )
 
 // CreatePasswordReset invalidates previous unused tokens before saving a new one.
+// Avulso não tem conta, então não recupera senha.
 func (s *Store) CreatePasswordReset(ctx context.Context, email, tokenHash string, expiresAt time.Time) (User, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -17,7 +18,7 @@ func (s *Store) CreatePasswordReset(ctx context.Context, email, tokenHash string
 	defer tx.Rollback(ctx)
 
 	var userID string
-	err = tx.QueryRow(ctx, `select id from users where lower(email) = lower($1) and status <> 'archived' for update`, email).Scan(&userID)
+	err = tx.QueryRow(ctx, `select id from users where lower(email) = lower($1) and status <> 'archived' and kind = 'member' for update`, email).Scan(&userID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrNotFound
 	}

@@ -49,7 +49,16 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	page, _ := strconv.Atoi(q.Get("page"))
+	// Sem kind, só membros: a PWA anterior ao filtro não pode ver avulsos.
+	kind := q.Get("kind")
+	switch kind {
+	case "", store.KindMember, store.KindGuest:
+	default:
+		writeError(w, http.StatusBadRequest, "kind deve ser member ou guest")
+		return
+	}
 	users, total, err := s.store.ListUsers(r.Context(), store.UserFilter{
+		Kind:      kind,
 		Search:    q.Get("search"),
 		Role:      q.Get("role"),
 		Status:    q.Get("status"),
@@ -82,6 +91,19 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	if body.Role != nil && *body.Role != "admin" && *body.Role != "player" {
 		writeError(w, http.StatusBadRequest, "role deve ser admin ou player")
 		return
+	}
+	// Avulso não é membro: não vira admin nem é ativado/inativado como
+	// mensalista. Corrigir nome e telefone continua possível.
+	if body.Role != nil || body.Status != nil {
+		target, err := s.store.UserByID(r.Context(), targetID)
+		if err != nil {
+			writeStoreError(w, err)
+			return
+		}
+		if target.Kind != store.KindMember {
+			writeError(w, http.StatusConflict, "avulso não tem perfil nem status de membro")
+			return
+		}
 	}
 
 	err := s.store.UpdateUser(r.Context(), targetID, store.UserUpdate{

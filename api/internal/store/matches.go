@@ -40,7 +40,7 @@ type MatchInput struct {
 }
 
 // CreateMatch cria a partida com confirmação aberta e uma linha de confirmação
-// "sem resposta" para cada usuário ativo.
+// "sem resposta" para cada membro ativo (avulsos entram só ao pagar a vaga).
 func (s *Store) CreateMatch(ctx context.Context, in MatchInput, createdBy string) (Match, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -58,13 +58,13 @@ func (s *Store) CreateMatch(ctx context.Context, in MatchInput, createdBy string
 	}
 	_, err = tx.Exec(ctx, `
 		insert into match_confirmations (match_id, user_id)
-		select $1, id from users where status = 'active'`, id)
+		select $1, id from users where status = 'active' and kind = 'member'`, id)
 	if err != nil {
 		return Match{}, err
 	}
 	// Queue inside the transaction so a failed creation can never send a push.
 	_, err = tx.Exec(ctx, `insert into match_push_deliveries(subscription_id,match_id,kind)
- select p.id,$1,'created' from push_subscriptions p join users u on u.id=p.user_id where u.status='active'`, id)
+ select p.id,$1,'created' from push_subscriptions p join users u on u.id=p.user_id where u.status='active' and u.kind='member'`, id)
 	if err != nil {
 		return Match{}, err
 	}
@@ -153,8 +153,16 @@ func (s *Store) SetMatchStatus(ctx context.Context, id, newStatus string, allowe
 	return nil
 }
 
+// CancelMatch cancela a partida e, na mesma transação, resolve as inscrições
+// avulsas: quem pagou vai para reembolso, reservas são canceladas.
 func (s *Store) CancelMatch(ctx context.Context, id, reason string) error {
-	tag, err := s.pool.Exec(ctx, `
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	tag, err := tx.Exec(ctx, `
 		update matches set status = 'cancelled', cancel_reason = $2
 		where id = $1 and status not in ('finished', 'cancelled')`, id, reason)
 	if err != nil {
@@ -163,7 +171,10 @@ func (s *Store) CancelMatch(ctx context.Context, id, reason string) error {
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	return nil
+	if err := settleGuestBookingsOnCancel(ctx, tx, id); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 // FinishMatch encerra a partida e abre a votação até votingCloses.

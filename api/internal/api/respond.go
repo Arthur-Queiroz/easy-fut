@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"futdarapaziada/api/internal/billing"
+	"futdarapaziada/api/internal/guests"
 	"futdarapaziada/api/internal/matches"
 	"futdarapaziada/api/internal/store"
 )
@@ -54,6 +55,12 @@ func writeStoreError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusForbidden, err.Error())
 	case errors.Is(err, matches.ErrVotingClosed), errors.Is(err, matches.ErrDuplicateVote), errors.Is(err, matches.ErrVoteLimit):
 		writeError(w, http.StatusConflict, err.Error())
+	case errors.Is(err, guests.ErrSoldOut), errors.Is(err, guests.ErrSaleClosed),
+		errors.Is(err, guests.ErrPhoneAlreadyBooked), errors.Is(err, guests.ErrInvalidTransition):
+		writeError(w, http.StatusConflict, err.Error())
+	case errors.Is(err, guests.ErrInvalidPhone), errors.Is(err, guests.ErrInvalidEmail),
+		errors.Is(err, guests.ErrInvalidName), errors.Is(err, guests.ErrInvalidExpense):
+		writeError(w, http.StatusBadRequest, err.Error())
 	default:
 		log.Printf("erro interno: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro interno")

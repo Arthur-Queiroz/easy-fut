@@ -18,7 +18,8 @@ func currentUser(r *http.Request) store.User {
 }
 
 // requireAuth valida o cookie de sessão e carrega o usuário do banco a cada
-// requisição, para que inativações tenham efeito imediato.
+// requisição, para que inativações tenham efeito imediato. Avulso não tem
+// conta: um token com o id dele (vazado ou forjado) é recusado.
 func (s *Server) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(auth.CookieName)
@@ -32,7 +33,7 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 			return
 		}
 		user, err := s.store.UserByID(r.Context(), userID)
-		if err != nil {
+		if err != nil || user.Kind != store.KindMember {
 			writeError(w, http.StatusUnauthorized, "usuário não encontrado")
 			return
 		}
@@ -53,7 +54,7 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 // consultar o motivo do bloqueio e pagar o que está pendente.
 func (s *Server) requireActive(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if currentUser(r).Status != "active" {
+		if user := currentUser(r); user.Status != "active" || user.Kind != store.KindMember {
 			writeErrorCode(w, http.StatusForbidden,
 				"seu acesso está bloqueado; regularize o pagamento pendente", "inactive")
 			return
