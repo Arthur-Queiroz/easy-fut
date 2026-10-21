@@ -68,6 +68,7 @@ type ConfirmationEntry struct {
 	Name        string     `json:"name"`
 	AvatarColor string     `json:"avatar_color"`
 	Role        string     `json:"role"`
+	Kind        string     `json:"kind"` // "member" ou "guest": selo Avulso
 	Response    string     `json:"response"`
 	RespondedAt *time.Time `json:"responded_at,omitempty"`
 }
@@ -85,6 +86,7 @@ type TeamMember struct {
 	UserID      string `json:"user_id"`
 	Name        string `json:"name"`
 	AvatarColor string `json:"avatar_color"`
+	Kind        string `json:"kind"` // "member" ou "guest": selo Avulso
 }
 
 // TeamPreset é um grupo salvo de jogadores para agilizar a escalação manual.

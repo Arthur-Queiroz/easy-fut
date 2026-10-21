@@ -63,6 +63,10 @@ func writeStoreError(w http.ResponseWriter, err error) {
 		errors.Is(err, guests.ErrInvalidName), errors.Is(err, guests.ErrInvalidExpense),
 		errors.Is(err, guests.ErrInvalidSlots), errors.Is(err, guests.ErrInvalidPrice):
 		writeError(w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, guests.ErrResendNotConfirmed), errors.Is(err, guests.ErrVoteLinkVotingClosed):
+		writeError(w, http.StatusConflict, err.Error())
+	case errors.Is(err, guests.ErrInvalidMessageKind):
+		writeError(w, http.StatusBadRequest, err.Error())
 	default:
 		log.Printf("erro interno: %v", err)
 		writeError(w, http.StatusInternalServerError, "erro interno")

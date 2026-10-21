@@ -25,6 +25,7 @@ type Server struct {
 	loginLimiter         *auth.LoginLimiter
 	passwordResetLimiter *auth.LoginLimiter
 	guestLimiters        guestPublicLimiters
+	guestVoteLimiter     *auth.LoginLimiter // por IP, no voto público do avulso
 }
 
 func NewServer(cfg config.Config, st *store.Store, sender notify.Sender) *Server {
@@ -37,6 +38,7 @@ func NewServer(cfg config.Config, st *store.Store, sender notify.Sender) *Server
 		loginLimiter:         auth.NewLoginLimiter(10, 15*time.Minute),
 		passwordResetLimiter: auth.NewLoginLimiter(3, 15*time.Minute),
 		guestLimiters:        newGuestPublicLimiters(),
+		guestVoteLimiter:     auth.NewLoginLimiter(60, 15*time.Minute),
 	}
 }
 
@@ -62,6 +64,9 @@ func (s *Server) Handler() http.Handler {
 		r.With(limitByIP(s.guestLimiters.list)).Get("/public/guest-matches", s.handlePublicGuestMatches)
 		r.With(limitByIP(s.guestLimiters.create)).Post("/public/guest-bookings", s.handleCreateGuestBooking)
 		r.With(limitByIP(s.guestLimiters.status)).Get("/public/guest-bookings/{id}", s.handleGetGuestBooking)
+		// Participação avulsa — voto (fase C): o token do link é o acesso.
+		r.Get("/public/guest-vote/{token}", s.handleGuestVote)
+		r.Put("/public/guest-vote/{token}/votes", s.handleGuestReplaceVotes)
 
 		// Autenticado — acessível também a usuários inativos (consultar bloqueio e pagar)
 		r.Group(func(r chi.Router) {
@@ -143,6 +148,9 @@ func (s *Server) Handler() http.Handler {
 			r.Post("/admin/charges/{id}/mark-paid", s.handleMarkPaid)
 			r.Post("/admin/charges/{id}/cancel", s.handleCancelCharge)
 			r.Post("/admin/charges/{id}/exempt", s.handleExemptCharge)
+
+			// Participação avulsa — reenvio (fase C)
+			r.Post("/admin/guest-bookings/{id}/resend", s.handleResendGuestMessage)
 
 			r.Get("/admin/settings", s.handleGetSettings)
 			r.Put("/admin/settings", s.handleUpdateSettings)
