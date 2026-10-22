@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { api, errorMessage } from '../../api/client'
 import type { Charge, ChargeBatch, User } from '../../api/types'
 import { currentMonth, formatCents, formatDMY, formatMonth, formatTimestamp } from '../../lib/format'
@@ -13,6 +13,7 @@ import BaseButton from '../../components/ui/BaseButton.vue'
 import Card from '../../components/ui/Card.vue'
 import Modal from '../../components/ui/Modal.vue'
 import SectionLabel from '../../components/ui/SectionLabel.vue'
+import Toast from '../../components/ui/Toast.vue'
 
 const batches = ref<ChargeBatch[]>([])
 const charges = ref<Charge[]>([])
@@ -27,6 +28,7 @@ const error = ref('')
 const generating = ref(false)
 const actionError = ref('')
 const actionSuccess = ref('')
+let successTimeout: ReturnType<typeof setTimeout> | undefined
 const remindingChargeID = ref('')
 const reminderQueue = ref<Charge[]>([])
 const reminderIndex = ref(0)
@@ -50,6 +52,11 @@ onMounted(async () => {
 })
 
 watch(month, load)
+watch(actionSuccess, (message) => {
+  clearTimeout(successTimeout)
+  if (message) successTimeout = setTimeout(() => { actionSuccess.value = '' }, 5000)
+})
+onBeforeUnmount(() => clearTimeout(successTimeout))
 
 async function load() {
   const { data } = await api.get<{ batches: ChargeBatch[]; charges: Charge[] }>('/admin/charges', {
@@ -359,6 +366,7 @@ const monthOptions = computed(() => {
 
 <template>
   <AdminLayout>
+    <Toast :message="actionSuccess" @close="actionSuccess = ''" />
     <template #title>Mensalidades</template>
     <template #subtitle>Rateio do aluguel da quadra e de partidas avulsas</template>
     <template #actions>
@@ -481,9 +489,6 @@ const monthOptions = computed(() => {
         </div>
         <p v-if="actionError" class="border-b border-danger/20 bg-dangerBg px-5 py-3 text-[13px] font-medium text-danger">
           {{ actionError }}
-        </p>
-        <p v-if="actionSuccess" class="border-b border-brand/20 bg-brandSoft px-5 py-3 text-[13px] font-medium text-brandInk">
-          {{ actionSuccess }}
         </p>
 
         <div class="overflow-x-auto">
@@ -634,9 +639,6 @@ const monthOptions = computed(() => {
         </p>
         <p v-if="actionError" class="mt-3 rounded-xl bg-dangerBg px-3 py-2.5 text-[13px] font-medium text-danger">
           {{ actionError }}
-        </p>
-        <p v-if="actionSuccess" class="mt-3 rounded-xl bg-brandSoft px-3 py-2.5 text-[13px] font-medium text-brandInk">
-          {{ actionSuccess }}
         </p>
         <BaseButton
           class="mt-5 w-full"
