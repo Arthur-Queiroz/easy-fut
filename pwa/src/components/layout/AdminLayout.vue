@@ -48,6 +48,14 @@ async function logout() {
         </span>
       </router-link>
 
+      <router-link
+        to="/"
+        class="flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-[10px] bg-lime/10 px-3 py-2 text-[13.5px] font-semibold text-lime hover:bg-lime/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime lg:hidden"
+      >
+        <NavIcon name="home" :size="17" />
+        Área do jogador
+      </router-link>
+
       <nav class="flex flex-row gap-1 lg:flex-col lg:gap-0.5">
         <router-link
           v-for="item in items"
@@ -62,6 +70,14 @@ async function logout() {
       </nav>
 
       <div class="flex-1" />
+
+      <router-link
+        to="/"
+        class="mb-2 hidden items-center gap-2.5 whitespace-nowrap rounded-[10px] bg-lime/10 px-3 py-2 text-[13.5px] font-semibold text-lime hover:bg-lime/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime lg:flex"
+      >
+        <NavIcon name="home" :size="17" />
+        Área do jogador
+      </router-link>
 
       <div class="hidden items-center gap-2.5 border-t border-white/10 px-2 py-2.5 lg:flex">
         <Avatar :name="auth.user?.name ?? ''" color="#2EE07C" size="sm" />
