@@ -34,7 +34,7 @@ async function logout() {
   <div class="flex min-h-dvh flex-col bg-bg lg:flex-row">
     <!-- Sidebar desktop / barra superior mobile -->
     <aside
-      class="flex shrink-0 flex-row items-center gap-1 overflow-x-auto px-3 py-2 lg:min-h-dvh lg:w-[216px] lg:flex-col lg:items-stretch lg:gap-0 lg:px-3 lg:py-[18px]"
+      class="flex shrink-0 flex-row items-center gap-1 overflow-x-auto pb-2 pl-[calc(env(safe-area-inset-left)+0.75rem)] pr-[calc(env(safe-area-inset-right)+0.75rem)] pt-[calc(env(safe-area-inset-top)+0.5rem)] lg:min-h-dvh lg:w-[216px] lg:flex-col lg:items-stretch lg:gap-0 lg:px-3 lg:py-[18px]"
       style="background-image: linear-gradient(180deg, #0c100f, #13251f)"
     >
       <router-link to="/" class="hidden items-center gap-2.5 px-2 pb-[18px] lg:flex" title="Voltar ao app">
@@ -91,27 +91,27 @@ async function logout() {
       </div>
     </aside>
 
-    <div class="min-w-0 flex-1 p-4 lg:overflow-y-auto lg:p-7">
-      <div class="mb-4 flex items-center justify-between gap-3">
-        <div>
+    <div class="min-w-0 flex-1 pb-[calc(env(safe-area-inset-bottom)+1rem)] pl-[calc(env(safe-area-inset-left)+1rem)] pr-[calc(env(safe-area-inset-right)+1rem)] pt-4 lg:overflow-y-auto lg:p-7">
+      <div class="mb-4 flex flex-wrap items-start gap-3 sm:items-center">
+        <div class="min-w-0 flex-1">
           <h1 class="text-[22px] font-bold text-ink lg:text-2xl lg:font-extrabold"><slot name="title" /></h1>
           <p class="text-[13.5px] text-ink2"><slot name="subtitle" /></p>
         </div>
-        <div class="flex items-center gap-2.5">
-          <button
-            type="button"
-            class="flex h-10 w-10 items-center justify-center rounded-[11px] border border-border bg-surface text-ink2"
-            :title="theme.theme === 'dark' ? 'Tema claro' : 'Tema escuro'"
-            @click="theme.toggle()"
-          >
-            <svg v-if="theme.theme === 'dark'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <circle cx="12" cy="12" r="4.5" />
-              <path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8" />
-            </svg>
-            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z" />
-            </svg>
-          </button>
+        <button
+          type="button"
+          class="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] border border-border bg-surface text-ink2"
+          :title="theme.theme === 'dark' ? 'Tema claro' : 'Tema escuro'"
+          @click="theme.toggle()"
+        >
+          <svg v-if="theme.theme === 'dark'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="4.5" />
+            <path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8" />
+          </svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M20 14.5A8.5 8.5 0 019.5 4a8.5 8.5 0 1010.5 10.5z" />
+          </svg>
+        </button>
+        <div v-if="$slots.actions" class="flex w-full flex-col gap-2.5 [&>button]:w-full sm:w-auto sm:flex-row sm:items-center sm:[&>button]:w-auto">
           <slot name="actions" />
         </div>
       </div>

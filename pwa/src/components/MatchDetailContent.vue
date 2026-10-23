@@ -329,7 +329,7 @@ function resultFor(category: string) {
         </Card>
 
         <!-- Botão de envio (FUT-003) -->
-        <div v-if="canVote" class="sticky bottom-[65px] z-10 flex flex-col gap-2">
+        <div v-if="canVote" class="sticky bottom-[calc(3.5rem+max(env(safe-area-inset-bottom),1.25rem))] z-10 flex flex-col gap-2 lg:bottom-4">
           <button
             type="button"
             :disabled="submitting"

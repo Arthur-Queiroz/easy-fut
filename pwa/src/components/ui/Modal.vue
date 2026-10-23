@@ -5,9 +5,12 @@ const emit = defineEmits<{ close: [] }>()
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div
+      v-if="open"
+      class="fixed inset-0 z-50 flex items-end justify-center pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] sm:items-center"
+    >
       <div class="absolute inset-0 bg-black/50" @click="emit('close')" />
-      <div class="relative m-0 w-full max-w-md rounded-t-2xl border border-border bg-surface p-5 shadow-card sm:m-4 sm:rounded-2xl">
+      <div class="relative m-0 max-h-full w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl border border-border bg-surface p-5 shadow-card sm:m-4 sm:max-h-[calc(100%-2rem)] sm:rounded-2xl">
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-bold text-ink">{{ title }}</h2>
           <button type="button" class="p-1 text-ink3" aria-label="Fechar" @click="emit('close')">
