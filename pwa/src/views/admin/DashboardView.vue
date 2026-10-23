@@ -70,7 +70,7 @@ const dotColor = (kind: string) => {
 
     <div v-if="stats" class="flex flex-col gap-4">
       <!-- Indicadores -->
-      <div class="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
+      <div class="grid gap-3.5 min-[390px]:grid-cols-2 xl:grid-cols-4">
         <Card class="px-[18px] py-4">
           <div class="text-[11px] font-semibold tracking-[.08em] text-ink3">USUÁRIOS ATIVOS</div>
           <div class="font-condensed text-[34px] font-bold leading-[1.1]">{{ stats.active_users }}</div>
