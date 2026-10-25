@@ -34,7 +34,7 @@ async function logout() {
   <div class="flex min-h-dvh flex-col bg-bg lg:flex-row">
     <!-- Sidebar desktop / barra superior mobile -->
     <aside
-      class="flex shrink-0 flex-row items-center gap-1 overflow-x-auto pb-2 pl-[calc(env(safe-area-inset-left)+0.75rem)] pr-[calc(env(safe-area-inset-right)+0.75rem)] pt-[calc(env(safe-area-inset-top)+0.5rem)] lg:min-h-dvh lg:w-[216px] lg:flex-col lg:items-stretch lg:gap-0 lg:px-3 lg:py-[18px]"
+      class="flex shrink-0 flex-row items-center gap-1 overflow-x-auto pb-2 pl-[calc(env(safe-area-inset-left)+0.75rem)] pr-[calc(env(safe-area-inset-right)+0.75rem)] pt-[calc(env(safe-area-inset-top)+0.5rem)] snap-x lg:min-h-dvh lg:w-[216px] lg:flex-col lg:items-stretch lg:gap-0 lg:px-3 lg:py-[18px]"
       style="background-image: linear-gradient(180deg, #0c100f, #13251f)"
     >
       <router-link to="/" class="hidden items-center gap-2.5 px-2 pb-[18px] lg:flex" title="Voltar ao app">
@@ -61,7 +61,7 @@ async function logout() {
           v-for="item in items"
           :key="item.to"
           :to="item.to"
-          class="flex items-center gap-2.5 whitespace-nowrap rounded-[10px] px-3 py-2 text-[13.5px]"
+          class="flex items-center gap-2.5 whitespace-nowrap rounded-[10px] px-3 py-2 text-[13.5px] scroll-ml-3 snap-start"
           :class="route.path === item.to ? 'bg-lime/15 font-semibold text-lime' : 'font-medium text-white/70 hover:text-white'"
         >
           <NavIcon :name="item.icon" :size="17" />

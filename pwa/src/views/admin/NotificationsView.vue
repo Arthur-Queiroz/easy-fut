@@ -178,12 +178,12 @@ function deliverySummary(b: PushBroadcast): string {
             </div>
 
             <div v-if="audience === 'selected'" class="mt-1 rounded-xl border border-border">
-              <div class="flex flex-wrap items-center gap-2 border-b border-border p-2.5">
-                <input v-model="search" placeholder="Buscar por nome" class="field h-[36px] min-w-[180px] flex-1" />
-                <button type="button" class="text-xs font-semibold text-brand" @click="selectAllWithDevices">
+              <div class="flex flex-col gap-2 border-b border-border p-2.5 sm:flex-row sm:items-center">
+                <input v-model="search" placeholder="Buscar por nome" class="field h-[36px] w-full min-w-0 flex-1" />
+                <button type="button" class="whitespace-nowrap text-xs font-semibold text-brand" @click="selectAllWithDevices">
                   Marcar todos com notificações
                 </button>
-                <button v-if="selected.length" type="button" class="text-xs font-semibold text-ink3" @click="selected = []">
+                <button v-if="selected.length" type="button" class="whitespace-nowrap text-xs font-semibold text-ink3" @click="selected = []">
                   Limpar
                 </button>
               </div>
