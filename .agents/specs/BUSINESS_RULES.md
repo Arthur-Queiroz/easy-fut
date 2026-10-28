@@ -5,6 +5,12 @@ este arquivo no mesmo PR.
 
 ## Acesso
 
+- Membros autenticados, inclusive inativos, podem enviar ou remover sua foto
+  de perfil em `PUT/DELETE /me/avatar`. O upload aceita JPG/PNG de até 10 MB
+  e 4096 pixels por lado; a API regrava a imagem sem metadados. A foto atual
+  aparece em `avatar_url` e só é servida a membros autenticados. Sem foto,
+  o app continua mostrando as iniciais com `avatar_color`.
+
 - Sessão por JWT em cookie httpOnly. `requireAuth` recarrega o usuário do
   banco a cada requisição, então inativações valem na hora. Trocar a senha
   incrementa `session_version` e derruba as sessões antigas.

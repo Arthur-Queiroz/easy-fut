@@ -155,7 +155,7 @@ const dotColor = (kind: string) => {
               :key="charge.id"
               class="flex items-center gap-2.5 rounded-[11px] bg-dangerBg px-3 py-2.5"
             >
-              <Avatar :name="charge.user_name" :color="charge.avatar_color" size="xs" />
+              <Avatar :name="charge.user_name" :color="charge.avatar_color" :url="charge.avatar_url" size="xs" />
               <div class="min-w-0 flex-1">
                 <div class="truncate text-[13px] font-semibold text-danger">
                   {{ charge.user_name }} · vencida em {{ formatDMY(charge.due_date).slice(0, 5) }}

@@ -12,6 +12,7 @@ import Avatar from './ui/Avatar.vue'
 import Badge from './ui/Badge.vue'
 import Card from './ui/Card.vue'
 import SectionLabel from './ui/SectionLabel.vue'
+import MatchMediaViewer from './MatchMediaViewer.vue'
 
 const props = defineProps<{ matchId: string }>()
 
@@ -22,6 +23,7 @@ const detail = ref<MatchDetail | null>(null)
 const error = ref('')
 const uploading = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
+const viewerIndex = ref<number | null>(null)
 
 // FUT-005: 3 categorias (best_goal herda regras do top_scorer — pode votar em si)
 const VOTE_CATEGORIES: { key: VoteCategory; label: string; icon: string; selfVote: boolean; warnColor: boolean }[] = [
@@ -157,7 +159,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('pagehide', flushDraft)
   flushDraft()
 })
-watch(() => props.matchId, () => { load(); loadDraft() })
+watch(() => props.matchId, () => { viewerIndex.value = null; load(); loadDraft() })
 
 async function load() {
   if (!props.matchId) return
@@ -238,6 +240,11 @@ function resultFor(category: string) {
       >Finalizada</span>
     </div>
 
+    <a href="#fotos-da-partida" class="inline-flex w-fit items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-[13px] font-semibold text-brand hover:border-brand">
+      Fotos e vídeos · {{ detail.media.length }}
+      <span aria-hidden="true">↓</span>
+    </a>
+
     <!-- Aviso de votação -->
     <div
       v-if="votingOpen"
@@ -272,7 +279,7 @@ function resultFor(category: string) {
               class="mb-2 flex items-center gap-2.5 rounded-xl border-2 px-3 py-[9px]"
               :class="cat.warnColor ? 'border-warn bg-warnBg' : 'border-brand bg-brandSoft'"
             >
-              <Avatar :name="winner.name" :color="winner.avatar_color" size="sm" />
+              <Avatar :name="winner.name" :color="winner.avatar_color" :url="winner.avatar_url" size="sm" />
               <span class="flex-1 text-sm font-semibold">{{ winner.name }}</span>
               <span class="text-[13px] font-bold" :class="cat.warnColor ? 'text-warn' : 'text-brand'">
                 {{ winner.votes }} {{ winner.votes === 1 ? 'voto' : 'votos' }}
@@ -308,7 +315,7 @@ function resultFor(category: string) {
               :class="marks[cat.key].includes(player.user_id) ? 'border-2 ' + (cat.warnColor ? 'border-warn bg-warnBg' : 'border-brand bg-brandSoft') : 'border border-border'"
               @click="toggleMark(cat.key, player.user_id)"
             >
-              <Avatar :name="player.name" :color="player.avatar_color" size="sm" />
+              <Avatar :name="player.name" :color="player.avatar_color" :url="player.avatar_url" size="sm" />
               <span class="flex-1 text-sm" :class="marks[cat.key].includes(player.user_id) ? 'font-semibold' : 'font-medium'">
                 {{ player.user_id === auth.user?.id ? 'Você' : player.name }}
               </span>
@@ -357,7 +364,7 @@ function resultFor(category: string) {
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div v-for="player in participants" :key="player.user_id" class="flex min-w-0 items-center gap-2">
-            <Avatar :name="player.name" :color="player.avatar_color" size="xs" />
+            <Avatar :name="player.name" :color="player.avatar_color" :url="player.avatar_url" size="xs" />
             <span class="truncate text-[13px] font-medium">{{ player.name }}</span>
             <Badge v-if="player.kind === 'guest'" tone="info">Avulso</Badge>
           </div>
@@ -383,7 +390,7 @@ function resultFor(category: string) {
       </Card>
 
       <!-- Fotos e vídeos -->
-      <Card class="p-4" :class="match.status === 'finished' || match.status === 'voting' ? 'lg:col-span-2' : ''">
+      <Card id="fotos-da-partida" class="scroll-mt-4 p-4" :class="match.status === 'finished' || match.status === 'voting' ? 'lg:col-span-2' : ''">
         <div class="mb-[11px] flex items-center justify-between">
           <SectionLabel>Fotos e vídeos · {{ detail.media.length }}</SectionLabel>
           <button
@@ -398,13 +405,16 @@ function resultFor(category: string) {
           <input ref="fileInput" type="file" accept="image/*,video/*" class="hidden" @change="uploadMedia" />
         </div>
         <div class="grid grid-cols-4 gap-2">
-          <div v-for="item in detail.media" :key="item.id" class="group relative aspect-square overflow-hidden rounded-[10px] bg-surface2">
-            <img v-if="item.type === 'photo'" :src="safeUrl(item.url)" :alt="item.caption || 'Foto da partida'" class="h-full w-full object-cover" loading="lazy" />
-            <video v-else :src="safeUrl(item.url)" class="h-full w-full object-cover" preload="metadata" controls />
+          <div v-for="(item, index) in detail.media" :key="item.id" class="group relative aspect-square overflow-hidden rounded-[10px] bg-surface2">
+            <button type="button" class="relative h-full w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" :aria-label="item.type === 'video' ? 'Reproduzir vídeo da partida' : 'Ampliar foto da partida'" @click="viewerIndex = index">
+              <img v-if="item.type === 'photo'" :src="safeUrl(item.url)" :alt="item.caption || 'Foto da partida'" class="h-full w-full object-cover" loading="lazy" />
+              <video v-else :src="safeUrl(item.url)" class="pointer-events-none h-full w-full object-cover" preload="metadata" muted playsinline />
+              <span v-if="item.type === 'video'" aria-hidden="true" class="absolute inset-0 flex items-center justify-center bg-black/20 text-3xl text-white">▶</span>
+            </button>
             <button
               v-if="item.uploaded_by === auth.user?.id || auth.isAdmin"
               type="button"
-              class="absolute right-1 top-1 hidden h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white group-hover:flex"
+              class="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-80 hover:opacity-100"
               aria-label="Remover mídia"
               @click="removeMedia(item.id)"
             >
@@ -424,6 +434,7 @@ function resultFor(category: string) {
         <p v-if="detail.media.length === 0 && !detail.is_participant" class="text-sm text-ink3">Sem mídias nesta partida.</p>
       </Card>
     </div>
+    <MatchMediaViewer v-if="viewerIndex !== null && detail.media.length" :media="detail.media" :initial-index="viewerIndex" @close="viewerIndex = null" />
   </div>
   <div v-else class="flex h-full items-center justify-center text-sm text-ink3">
     Carregando…

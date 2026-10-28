@@ -11,7 +11,7 @@ import (
 )
 
 const chargeColumns = `
-	c.id, c.batch_id, b.kind, b.title, c.user_id, u.name, u.role, u.avatar_color,
+	c.id, c.batch_id, b.kind, b.title, c.user_id, u.name, u.role, u.avatar_color, u.avatar_url,
 	to_char(c.reference_month, 'YYYY-MM'), c.amount_cents, c.pix_fee_cents, c.status, c.due_date::text,
 	c.paid_at, c.paid_method, c.registered_by, coalesce(r.name, ''), c.pix_payload,
 	c.pix_ticket_url, c.pix_qr_code_base64, c.provider_order_id, c.created_at`
@@ -24,7 +24,7 @@ const chargeJoins = `
 
 func scanCharge(row pgx.Row) (Charge, error) {
 	var c Charge
-	err := row.Scan(&c.ID, &c.BatchID, &c.BatchKind, &c.BatchTitle, &c.UserID, &c.UserName, &c.UserRole, &c.AvatarColor,
+	err := row.Scan(&c.ID, &c.BatchID, &c.BatchKind, &c.BatchTitle, &c.UserID, &c.UserName, &c.UserRole, &c.AvatarColor, &c.AvatarURL,
 		&c.ReferenceMonth, &c.AmountCents, &c.PixFeeCents, &c.Status, &c.DueDate,
 		&c.PaidAt, &c.PaidMethod, &c.RegisteredBy, &c.RegisteredName, &c.PixPayload,
 		&c.PixTicketURL, &c.PixQRCodeBase64, &c.ProviderOrderID, &c.CreatedAt)

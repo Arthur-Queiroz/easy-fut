@@ -533,7 +533,7 @@ const monthOptions = computed(() => {
               >
                 <td class="px-5 py-2.5">
                   <div class="flex items-center gap-2.5">
-                    <Avatar :name="charge.user_name" :color="charge.avatar_color" size="xs" />
+                    <Avatar :name="charge.user_name" :color="charge.avatar_color" :url="charge.avatar_url" size="xs" />
                     <span class="text-[13px] font-semibold">
                       {{ charge.user_name }}
                       <span
@@ -703,7 +703,7 @@ const monthOptions = computed(() => {
               class="h-4 w-4 shrink-0 accent-brand"
               @change="toggleMatchUser(user.id)"
             />
-            <Avatar :name="user.name" :color="user.avatar_color" size="xs" />
+            <Avatar :name="user.name" :color="user.avatar_color" :url="user.avatar_url" size="xs" />
             <span class="text-[13px] font-semibold">{{ user.name }}</span>
           </label>
           <p v-if="filteredMatchUsers.length === 0" class="px-3 py-4 text-center text-[13px] text-ink3">

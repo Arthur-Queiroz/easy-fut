@@ -11,6 +11,7 @@ export interface VoteTally {
   candidate_id: string
   name: string
   avatar_color: string
+  avatar_url?: string
   votes: number
 }
 
@@ -55,6 +56,7 @@ export interface CandidateBar {
   id: string
   name: string
   avatarColor: string
+  avatarURL?: string
   votes: number
   share: number // fração dos votos da categoria, 0–1
   voters: string[] // nomes de quem votou
@@ -72,6 +74,7 @@ export function categoryBars(tally: VoteTally[], flat: FlatVote[], category: Vot
       id: r.candidate_id,
       name: r.name,
       avatarColor: r.avatar_color,
+      avatarURL: r.avatar_url,
       votes: r.votes,
       share: total ? r.votes / total : 0,
       voters: flat

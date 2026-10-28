@@ -93,7 +93,7 @@ function headerStyle(team: Team) {
             </div>
             <div class="grid grid-cols-2 gap-x-3 gap-y-[7px] px-4 py-2.5 lg:gap-x-4 lg:gap-y-2.5 lg:px-5 lg:py-3">
               <div v-for="member in team.members" :key="member.user_id" class="flex items-center gap-2">
-                <Avatar :name="member.name" :color="member.avatar_color" size="xs" />
+                <Avatar :name="member.name" :color="member.avatar_color" :url="member.avatar_url" size="xs" />
                 <span class="truncate text-[13px]" :class="member.user_id === auth.user?.id ? 'font-semibold' : 'font-medium'">
                   {{ member.user_id === auth.user?.id ? 'Você' : member.name }}
                 </span>

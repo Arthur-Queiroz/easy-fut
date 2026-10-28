@@ -237,7 +237,7 @@ async function submit() {
             </button>
           </div>
           <div v-for="player in going" :key="player.user_id" class="flex items-center gap-2">
-            <Avatar :name="player.name" :color="player.avatar_color" size="xs" />
+            <Avatar :name="player.name" :color="player.avatar_color" :url="player.avatar_url" size="xs" />
             <span class="min-w-0 flex-1 truncate text-[13px] font-medium">{{ player.name }}</span>
             <Badge v-if="player.kind === 'guest'" tone="info">Avulso</Badge>
             <select v-model.number="assignment[player.user_id]" class="field !h-9 !px-2 text-[12px]">

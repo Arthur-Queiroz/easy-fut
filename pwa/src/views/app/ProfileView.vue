@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, errorMessage } from '../../api/client'
-import type { Charge } from '../../api/types'
+import type { Charge, User } from '../../api/types'
 import { useAuthStore } from '../../stores/auth'
 import { useThemeStore } from '../../stores/theme'
 import { formatDMY, formatMonth, parseISODate } from '../../lib/format'
@@ -24,6 +24,45 @@ const editing = ref<'phone' | 'email' | null>(null)
 const editValue = ref('')
 const error = ref('')
 const saving = ref(false)
+const avatarInput = ref<HTMLInputElement | null>(null)
+const avatarBusy = ref(false)
+const avatarError = ref('')
+
+async function uploadAvatar(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  avatarError.value = ''
+  if (!['image/jpeg', 'image/png'].includes(file.type) || file.size > 10 * 1024 * 1024) {
+    avatarError.value = 'Escolha uma foto JPG ou PNG de até 10 MB.'
+    return
+  }
+  avatarBusy.value = true
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    const { data } = await api.put<User>('/me/avatar', form)
+    auth.user = data
+  } catch (e) {
+    avatarError.value = errorMessage(e)
+  } finally {
+    avatarBusy.value = false
+  }
+}
+
+async function removeAvatar() {
+  avatarError.value = ''
+  avatarBusy.value = true
+  try {
+    const { data } = await api.delete<User>('/me/avatar')
+    auth.user = data
+  } catch (e) {
+    avatarError.value = errorMessage(e)
+  } finally {
+    avatarBusy.value = false
+  }
+}
 
 onMounted(async () => {
   await auth.fetchMe()
@@ -85,7 +124,7 @@ async function logout() {
   <MobileShell>
     <template #header>
       <div class="flex items-center gap-4">
-        <Avatar :name="auth.user?.name ?? ''" color="#2EE07C" size="lg" ring />
+        <Avatar :name="auth.user?.name ?? ''" :url="auth.user?.avatar_url" color="#2EE07C" size="lg" ring />
         <div>
           <div class="text-[22px] font-bold">{{ auth.user?.name }}</div>
           <div class="mt-1.5 flex flex-wrap gap-[7px]">
@@ -102,9 +141,17 @@ async function logout() {
     </template>
 
     <div class="flex flex-col gap-3.5 px-4 pt-4 lg:mx-auto lg:max-w-3xl lg:px-0 lg:pt-0">
+      <Card class="flex flex-wrap items-center gap-3 px-4 py-3">
+        <input ref="avatarInput" type="file" accept="image/jpeg,image/png" class="sr-only" aria-label="Escolher foto de perfil" @change="uploadAvatar" />
+        <button type="button" class="text-sm font-semibold text-brand disabled:opacity-50" :disabled="avatarBusy" @click="avatarInput?.click()">
+          {{ avatarBusy ? 'Enviando foto…' : auth.user?.avatar_url ? 'Trocar foto' : 'Adicionar foto' }}
+        </button>
+        <button v-if="auth.user?.avatar_url" type="button" class="text-sm font-semibold text-danger disabled:opacity-50" :disabled="avatarBusy" @click="removeAvatar">Remover foto</button>
+        <p v-if="avatarError" role="alert" class="w-full text-xs text-danger">{{ avatarError }}</p>
+      </Card>
       <!-- Cabeçalho desktop -->
       <div class="hidden items-center gap-5 lg:flex">
-        <Avatar :name="auth.user?.name ?? ''" color="#2EE07C" size="lg" ring />
+        <Avatar :name="auth.user?.name ?? ''" :url="auth.user?.avatar_url" color="#2EE07C" size="lg" ring />
         <div>
           <div class="text-2xl font-extrabold">{{ auth.user?.name }}</div>
           <div class="mt-1.5 flex flex-wrap gap-[7px]">

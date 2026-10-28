@@ -221,7 +221,7 @@ function statusBadge(match: Match): { tone: 'success' | 'warn' | 'danger' | 'inf
                 </div>
                 <div class="flex flex-wrap gap-1.5">
                   <div v-for="member in team.members" :key="member.user_id" class="flex items-center gap-1.5">
-                    <Avatar :name="member.name" :color="member.avatar_color" size="xs" />
+                    <Avatar :name="member.name" :color="member.avatar_color" :url="member.avatar_url" size="xs" />
                   </div>
                 </div>
               </div>

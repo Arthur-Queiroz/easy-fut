@@ -133,7 +133,7 @@ function toggleResponse() {
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div v-for="entry in going" :key="entry.user_id" class="flex items-center gap-2">
-              <Avatar :name="entry.name" :color="entry.avatar_color" size="xs" />
+              <Avatar :name="entry.name" :color="entry.avatar_color" :url="entry.avatar_url" size="xs" />
               <span class="truncate text-[13px] font-medium">
                 {{ entry.name }}
                 <span
