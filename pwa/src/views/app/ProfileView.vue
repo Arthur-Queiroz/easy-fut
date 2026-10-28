@@ -28,6 +28,10 @@ const avatarInput = ref<HTMLInputElement | null>(null)
 const avatarBusy = ref(false)
 const avatarError = ref('')
 
+function chooseAvatar() {
+  if (!avatarBusy.value) avatarInput.value?.click()
+}
+
 async function uploadAvatar(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -124,7 +128,12 @@ async function logout() {
   <MobileShell>
     <template #header>
       <div class="flex items-center gap-4">
-        <Avatar :name="auth.user?.name ?? ''" :url="auth.user?.avatar_url" color="#2EE07C" size="lg" ring />
+        <button type="button" class="group relative shrink-0 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white disabled:opacity-60" :aria-label="auth.user?.avatar_url ? 'Trocar foto de perfil' : 'Adicionar foto de perfil'" :disabled="avatarBusy" @click="chooseAvatar">
+          <Avatar :name="auth.user?.name ?? ''" :url="auth.user?.avatar_url" color="#2EE07C" size="lg" ring />
+          <span class="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-brand text-brandInk shadow" aria-hidden="true">
+            <NavIcon name="camera" :size="15" :stroke-width="2" />
+          </span>
+        </button>
         <div>
           <div class="text-[22px] font-bold">{{ auth.user?.name }}</div>
           <div class="mt-1.5 flex flex-wrap gap-[7px]">
@@ -141,17 +150,15 @@ async function logout() {
     </template>
 
     <div class="flex flex-col gap-3.5 px-4 pt-4 lg:mx-auto lg:max-w-3xl lg:px-0 lg:pt-0">
-      <Card class="flex flex-wrap items-center gap-3 px-4 py-3">
-        <input ref="avatarInput" type="file" accept="image/jpeg,image/png" class="sr-only" aria-label="Escolher foto de perfil" @change="uploadAvatar" />
-        <button type="button" class="text-sm font-semibold text-brand disabled:opacity-50" :disabled="avatarBusy" @click="avatarInput?.click()">
-          {{ avatarBusy ? 'Enviando foto…' : auth.user?.avatar_url ? 'Trocar foto' : 'Adicionar foto' }}
-        </button>
-        <button v-if="auth.user?.avatar_url" type="button" class="text-sm font-semibold text-danger disabled:opacity-50" :disabled="avatarBusy" @click="removeAvatar">Remover foto</button>
-        <p v-if="avatarError" role="alert" class="w-full text-xs text-danger">{{ avatarError }}</p>
-      </Card>
+      <input ref="avatarInput" type="file" accept="image/jpeg,image/png" class="sr-only" aria-label="Escolher foto de perfil" @change="uploadAvatar" />
       <!-- Cabeçalho desktop -->
       <div class="hidden items-center gap-5 lg:flex">
-        <Avatar :name="auth.user?.name ?? ''" :url="auth.user?.avatar_url" color="#2EE07C" size="lg" ring />
+        <button type="button" class="group relative shrink-0 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand disabled:opacity-60" :aria-label="auth.user?.avatar_url ? 'Trocar foto de perfil' : 'Adicionar foto de perfil'" :disabled="avatarBusy" @click="chooseAvatar">
+          <Avatar :name="auth.user?.name ?? ''" :url="auth.user?.avatar_url" color="#2EE07C" size="lg" ring />
+          <span class="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-surface bg-brand text-brandInk shadow" aria-hidden="true">
+            <NavIcon name="camera" :size="15" :stroke-width="2" />
+          </span>
+        </button>
         <div>
           <div class="text-2xl font-extrabold">{{ auth.user?.name }}</div>
           <div class="mt-1.5 flex flex-wrap gap-[7px]">
@@ -164,6 +171,12 @@ async function logout() {
             </span>
           </div>
         </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink3">
+        <span>{{ avatarBusy ? 'Enviando foto…' : auth.user?.avatar_url ? 'Toque na foto para trocar' : 'Toque no círculo para adicionar foto' }}</span>
+        <button v-if="auth.user?.avatar_url" type="button" class="font-semibold text-danger disabled:opacity-50" :disabled="avatarBusy" @click="removeAvatar">Remover foto</button>
+        <p v-if="avatarError" role="alert" class="w-full font-medium text-danger">{{ avatarError }}</p>
       </div>
 
       <!-- Estatísticas -->
