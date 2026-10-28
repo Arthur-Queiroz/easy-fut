@@ -78,7 +78,7 @@ const activityIcon = (kind: string) => {
         <div class="text-[13.5px] text-ink2">{{ formatDateLong(todayISO()) }}</div>
       </div>
 
-      <div class="grid gap-3.5 lg:grid-cols-[1.55fr_1fr] lg:items-start">
+      <div class="grid gap-3.5 xl:grid-cols-[1.55fr_1fr] xl:items-start">
         <!-- Próxima partida -->
         <Card class="p-4 lg:p-6">
           <div class="flex items-center justify-between">
@@ -204,7 +204,7 @@ const activityIcon = (kind: string) => {
         </Card>
       </div>
 
-      <div class="grid gap-3.5 lg:grid-cols-[1.55fr_1fr] lg:items-start">
+      <div class="grid gap-3.5 xl:grid-cols-[1.55fr_1fr] xl:items-start">
         <!-- Atividades recentes -->
         <Card class="flex flex-col gap-3 p-4 lg:p-6">
           <SectionLabel>Atividades recentes</SectionLabel>

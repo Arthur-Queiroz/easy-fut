@@ -13,7 +13,7 @@
 ## Layout
 
 - Telas do jogador usam `MobileShell` (header verde em degradê e
-  `BottomNav` no mobile, `TopNav` no desktop). Telas do admin usam
+  `BottomNav` no mobile, `PlayerSidebar` no desktop). Telas do admin usam
   `AdminLayout`. Respeite `env(safe-area-inset-*)` em elementos fixos.
 - Monte telas com os componentes de `components/ui/` antes de escrever
   marcação nova: `Card`, `SectionLabel`, `Badge`, `BaseButton`, `Avatar`,

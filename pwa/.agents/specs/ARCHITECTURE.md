@@ -10,7 +10,7 @@ src/
   api/publicGuests.ts   endpoints públicos do avulso (tipos, chamadas, token da inscrição)
   components/
     ui/                 Card, Badge, Avatar, BaseButton, Modal, EmptyState, SearchSelect…
-    layout/             MobileShell (app), AdminLayout, PublicShell (avulso), BottomNav, TopNav, NavIcon
+    layout/             MobileShell (app), AdminLayout, PublicShell (avulso), BottomNav, PlayerSidebar, NavIcon
     pwa/                InstallPrompt, PushSettings
     admin/              componentes exclusivos do admin (sorteio, gráficos de votos)
   views/
