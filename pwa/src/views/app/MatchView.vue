@@ -40,7 +40,7 @@ function toggleResponse() {
 </script>
 
 <template>
-  <MobileShell>
+  <MobileShell wide>
     <template #header>
       <div v-if="match" class="flex items-center justify-between">
         <div>
@@ -124,14 +124,14 @@ function toggleResponse() {
         <span v-else class="text-[12px] text-ink3">Confirmação encerrada</span>
       </Card>
 
-      <div class="grid gap-3 lg:grid-cols-2 lg:items-start">
+      <div class="grid gap-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <!-- Confirmados -->
-        <Card class="p-4">
-          <div class="mb-[11px] flex items-center justify-between">
+        <Card class="p-4 lg:p-5">
+          <div class="mb-[11px] flex items-center justify-between lg:mb-4 lg:border-b lg:border-border lg:pb-3">
             <SectionLabel>Confirmados</SectionLabel>
             <span class="font-condensed text-[15px] font-bold text-brand">{{ going.length }}</span>
           </div>
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-2 gap-2 2xl:grid-cols-3">
             <div v-for="entry in going" :key="entry.user_id" class="flex items-center gap-2">
               <Avatar :name="entry.name" :color="entry.avatar_color" :url="entry.avatar_url" size="xs" />
               <span class="truncate text-[13px] font-medium">
@@ -147,9 +147,9 @@ function toggleResponse() {
         </Card>
 
         <!-- Não vão / sem resposta -->
-        <div class="grid grid-cols-2 gap-3 lg:grid-cols-1">
-          <Card class="px-4 py-3.5">
-            <div class="mb-[9px] flex items-center justify-between">
+        <div class="grid grid-cols-2 gap-3 lg:contents">
+          <Card class="px-4 py-3.5 lg:p-5">
+            <div class="mb-[9px] flex items-center justify-between lg:mb-4 lg:border-b lg:border-border lg:pb-3">
               <SectionLabel>Não vão</SectionLabel>
               <span class="font-condensed text-[15px] font-bold text-danger">{{ notGoing.length }}</span>
             </div>
@@ -159,18 +159,20 @@ function toggleResponse() {
                 <span class="truncate text-[12.5px] font-medium">{{ entry.name }}</span>
               </div>
             </div>
+            <p v-if="notGoing.length === 0" class="text-sm text-ink3">Ninguém recusou ainda.</p>
           </Card>
-          <div class="rounded-2xl border border-dashed border-border bg-surface px-4 py-3.5">
-            <div class="mb-[9px] flex items-center justify-between">
+          <div class="rounded-2xl border border-dashed border-border bg-surface px-4 py-3.5 lg:col-span-2 lg:p-5">
+            <div class="mb-[9px] flex items-center justify-between lg:mb-4 lg:border-b lg:border-border lg:pb-3">
               <SectionLabel>Sem resposta</SectionLabel>
               <span class="font-condensed text-[15px] font-bold text-warn">{{ noResponse.length }}</span>
             </div>
-            <div class="flex flex-col gap-[7px]">
-              <div v-for="entry in noResponse" :key="entry.user_id" class="flex items-center gap-2 opacity-60">
+            <div class="grid gap-y-[7px] lg:grid-cols-3 lg:gap-x-5 xl:grid-cols-4">
+              <div v-for="entry in noResponse" :key="entry.user_id" class="flex min-w-0 items-center gap-2 text-ink2">
                 <Avatar :name="entry.name" color="#8CA094" size="xs" />
                 <span class="truncate text-[12.5px] font-medium">{{ entry.name }}</span>
               </div>
             </div>
+            <p v-if="noResponse.length === 0" class="text-sm text-ink3">Todos já responderam.</p>
           </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import PlayerSidebar from './PlayerSidebar.vue'
 
 // Shell responsivo do painel do usuário: cabeçalho e navegação inferior no
 // celular; barra lateral e conteúdo em container no desktop.
-defineProps<{ noNav?: boolean }>()
+defineProps<{ noNav?: boolean; wide?: boolean }>()
 </script>
 
 <template>
@@ -18,7 +18,7 @@ defineProps<{ noNav?: boolean }>()
         <slot name="header" />
       </header>
       <main class="min-w-0 flex-1 lg:px-7 lg:py-7">
-        <div class="mx-auto lg:max-w-6xl">
+        <div class="mx-auto" :class="wide ? 'lg:max-w-7xl 2xl:max-w-[1440px]' : 'lg:max-w-6xl'">
           <slot />
         </div>
       </main>
