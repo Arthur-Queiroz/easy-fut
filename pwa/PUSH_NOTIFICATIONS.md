@@ -6,6 +6,8 @@ O navegador solicita permissão apenas após o jogador tocar em Ativar. No iPhon
 
 O frontend consulta a chave pública em `/api/push/config` e não recebe a chave privada. Publique a API antes da PWA; a preparação do Compose e das chaves VAPID está documentada em [`api/PUSH_NOTIFICATIONS.md`](../api/PUSH_NOTIFICATIONS.md).
 
+Em **Admin → Avisos**, também é possível escolher uma partida e enviar manualmente lembretes de presença ou voto por WhatsApp aos membros pendentes. A lista mostra números indisponíveis, mensagens na fila, enviadas e falhas que podem ser reenfileiradas. Essa função continua disponível se o push estiver desativado.
+
 ## Verificar
 
 ```bash

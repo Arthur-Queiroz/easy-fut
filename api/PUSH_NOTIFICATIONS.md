@@ -16,6 +16,12 @@ Em **Admin → Avisos** o administrador escreve uma mensagem (até 240 caractere
 
 O envio usa a mesma fila, worker, retries e limpeza de inscrições dos avisos de partida, em `broadcast_push_deliveries`. O status do usuário é conferido de novo no envio, e um aviso não entregue em 24 horas é descartado. Tocar na notificação abre o app na tela inicial. A tela lista os 20 últimos avisos com entregues, pendentes e falhas.
 
+## Lembretes manuais por WhatsApp
+
+Em **Admin → Avisos**, o administrador escolhe uma partida aberta ou em votação e seleciona os membros ainda pendentes. `GET /api/admin/matches/{id}/whatsapp-reminders?kind=confirmation|vote` lista os destinatários e o estado do lembrete. `POST` no mesmo caminho com `{ "kind": "confirmation", "user_ids": ["uuid"] }` coloca mensagens na fila e responde `202` com `{ "queued": 1 }`. O aviso inclui um link para a partida no app.
+
+O envio usa a fila `notifications` e o worker de cinco minutos. Há no máximo um lembrete por membro, partida e tipo; uma entrega falha pode ser reenfileirada. O worker verifica novamente o estado da partida, a resposta de presença ou a existência de voto antes de enviar. Esta função não depende das chaves VAPID e não envia mensagens reais nos testes.
+
 ## Compatibilidade
 
 Use HTTPS em produção. No iPhone/iPad (iOS/iPadOS 16.4+), adicione o app à tela inicial pelo Safari e abra o ícone para habilitar notificações. Em navegadores compatíveis no Android, permita notificações. Entrega depende de permissões, conectividade, navegador e configurações do sistema; não é uma garantia de leitura.

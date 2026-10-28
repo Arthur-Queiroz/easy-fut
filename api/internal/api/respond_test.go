@@ -9,6 +9,8 @@ import (
 	"futdarapaziada/api/internal/billing"
 	"futdarapaziada/api/internal/guests"
 	"futdarapaziada/api/internal/matches"
+	"futdarapaziada/api/internal/notices"
+	"futdarapaziada/api/internal/store"
 )
 
 // Os status e mensagens da votação são o contrato que a PWA já trata; a
@@ -39,6 +41,27 @@ func TestWriteStoreErrorVotingContract(t *testing.T) {
 	}
 	if got := matches.ErrVoteLimit.Error(); got != "você já usou seus 2 votos nesta categoria" {
 		t.Errorf("mensagem do limite mudou: %q", got)
+	}
+}
+
+func TestWriteStoreErrorMatchReminderContract(t *testing.T) {
+	for _, tc := range []struct {
+		err    error
+		status int
+	}{
+		{notices.ErrInvalidReminderKind, http.StatusBadRequest},
+		{notices.ErrReminderClosed, http.StatusConflict},
+		{store.ErrNoReminderRecipients, http.StatusUnprocessableEntity},
+	} {
+		rec := httptest.NewRecorder()
+		writeStoreError(rec, tc.err)
+		var body apiError
+		if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if rec.Code != tc.status || body.Error != tc.err.Error() {
+			t.Errorf("%v: %d %q, esperado %d", tc.err, rec.Code, body.Error, tc.status)
+		}
 	}
 }
 

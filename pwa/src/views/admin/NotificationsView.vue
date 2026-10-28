@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { api, errorMessage } from '../../api/client'
-import type { PushBroadcast, PushRecipient } from '../../api/types'
-import { formatTimestamp } from '../../lib/format'
+import type { Match, MatchReminderRecipient, PushBroadcast, PushRecipient } from '../../api/types'
+import { formatDMY, formatTimestamp } from '../../lib/format'
 import AdminLayout from '../../components/layout/AdminLayout.vue'
 import NavIcon from '../../components/layout/NavIcon.vue'
 import Avatar from '../../components/ui/Avatar.vue'
@@ -27,11 +27,89 @@ const confirming = ref(false)
 const sending = ref(false)
 const error = ref('')
 const success = ref('')
+const matches = ref<Match[]>([])
+const reminderMatchID = ref('')
+const reminderKind = ref<'confirmation' | 'vote'>('confirmation')
+const reminderRecipients = ref<MatchReminderRecipient[]>([])
+const reminderSelected = ref<string[]>([])
+const reminderLoading = ref(false)
+const reminderConfirming = ref(false)
+const reminderSending = ref(false)
+const reminderError = ref('')
+const reminderSuccess = ref('')
 
 onMounted(async () => {
   const [config] = await Promise.all([api.get<{ enabled: boolean }>('/push/config'), loadRecipients(), loadHistory()])
   pushEnabled.value = config.data.enabled
 })
+onMounted(loadMatches)
+
+async function loadMatches() {
+  try {
+    const { data } = await api.get<Match[]>('/matches')
+    matches.value = (data ?? []).filter((m) =>
+      (m.status === 'open' && new Date(m.confirmation_deadline).getTime() > Date.now()) ||
+      (m.status === 'voting' && m.voting_closes_at && new Date(m.voting_closes_at).getTime() > Date.now()),
+    )
+    reminderMatchID.value = matches.value[0]?.id ?? ''
+  } catch (e) {
+    reminderError.value = errorMessage(e)
+  }
+}
+
+const reminderMatch = computed(() => matches.value.find((m) => m.id === reminderMatchID.value))
+const reminderSendable = computed(() => reminderRecipients.value.filter((r) => r.has_whatsapp && r.reminder_status !== 'scheduled' && r.reminder_status !== 'sent'))
+const reminderChosen = computed(() => reminderSendable.value.filter((r) => reminderSelected.value.includes(r.id)))
+
+watch([reminderMatchID, reminderKind], loadReminderRecipients)
+
+async function loadReminderRecipients() {
+  reminderSelected.value = []
+  reminderRecipients.value = []
+  reminderError.value = ''
+  reminderSuccess.value = ''
+  if (!reminderMatchID.value) return
+  const matchID = reminderMatchID.value
+  const kind = reminderKind.value
+  reminderLoading.value = true
+  try {
+    const { data } = await api.get<MatchReminderRecipient[]>(`/admin/matches/${matchID}/whatsapp-reminders`, {
+      params: { kind },
+    })
+    if (reminderMatchID.value === matchID && reminderKind.value === kind) reminderRecipients.value = data ?? []
+  } catch (e) {
+    if (reminderMatchID.value === matchID && reminderKind.value === kind) reminderError.value = errorMessage(e)
+  } finally {
+    if (reminderMatchID.value === matchID && reminderKind.value === kind) reminderLoading.value = false
+  }
+}
+
+function toggleReminder(id: string) {
+  reminderSelected.value = reminderSelected.value.includes(id)
+    ? reminderSelected.value.filter((value) => value !== id)
+    : [...reminderSelected.value, id]
+}
+
+async function sendReminders() {
+  if (!reminderMatchID.value || !reminderChosen.value.length) return
+  reminderSending.value = true
+  reminderError.value = ''
+  try {
+    const { data } = await api.post<{ queued: number }>(`/admin/matches/${reminderMatchID.value}/whatsapp-reminders`, {
+      kind: reminderKind.value,
+      user_ids: reminderChosen.value.map((r) => r.id),
+    })
+    reminderSuccess.value = `${plural(data.queued, 'lembrete', 'lembretes')} na fila do WhatsApp. A entrega pode levar até 5 minutos.`
+    const sent = new Set(reminderChosen.value.map((r) => r.id))
+    reminderRecipients.value = reminderRecipients.value.map((r) => sent.has(r.id) ? { ...r, reminder_status: 'scheduled' } : r)
+    reminderSelected.value = []
+  } catch (e) {
+    reminderError.value = errorMessage(e)
+  } finally {
+    reminderSending.value = false
+    reminderConfirming.value = false
+  }
+}
 
 async function loadRecipients() {
   const { data } = await api.get<PushRecipient[]>('/admin/push/recipients')
@@ -128,14 +206,14 @@ function deliverySummary(b: PushBroadcast): string {
 <template>
   <AdminLayout>
     <template #title>Avisos</template>
-    <template #subtitle>Notificação no celular para todos os membros ou para quem você escolher</template>
+    <template #subtitle>Avisos por notificação e lembretes de partida pelo WhatsApp</template>
 
     <div class="flex flex-col gap-4">
       <p
         v-if="!pushEnabled"
         class="rounded-xl bg-warnBg px-4 py-3 text-[13px] font-medium text-warn"
       >
-        As notificações ainda não estão configuradas no servidor; não é possível enviar avisos.
+        As notificações no celular ainda não estão configuradas. Os lembretes pelo WhatsApp continuam disponíveis.
       </p>
 
       <Card class="px-5 py-[18px]">
@@ -235,9 +313,64 @@ function deliverySummary(b: PushBroadcast): string {
         </form>
       </Card>
 
+      <Card class="px-5 py-[18px]">
+        <SectionLabel>Lembretes pelo WhatsApp</SectionLabel>
+        <p class="mt-1 text-[13px] text-ink2">Escolha uma partida e lembre apenas quem ainda não confirmou presença ou não votou.</p>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+          <label class="flex flex-col gap-1.5 text-[12.5px] font-semibold text-ink2">
+            Partida
+            <select v-model="reminderMatchID" class="field">
+              <option value="">Selecione uma partida</option>
+              <option v-for="match in matches" :key="match.id" :value="match.id">
+                {{ formatDMY(match.match_date) }} · {{ match.venue }}
+              </option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1.5 text-[12.5px] font-semibold text-ink2">
+            Lembrar sobre
+            <select v-model="reminderKind" class="field">
+              <option value="confirmation">Confirmar presença</option>
+              <option value="vote">Votar na partida</option>
+            </select>
+          </label>
+        </div>
+        <p v-if="reminderMatch && reminderKind === 'confirmation' && reminderMatch.status !== 'open'" class="mt-3 text-[12px] text-ink3">Esta partida já passou da fase de confirmação.</p>
+        <p v-if="reminderMatch && reminderKind === 'vote' && reminderMatch.status !== 'voting'" class="mt-3 text-[12px] text-ink3">A votação desta partida ainda não está aberta.</p>
+        <div v-if="reminderMatchID && !reminderLoading" class="mt-4 rounded-xl border border-border">
+          <div class="flex items-center justify-between gap-3 border-b border-border px-3 py-2.5">
+            <span class="text-[12px] font-semibold text-ink2">{{ plural(reminderSendable.length, 'membro disponível', 'membros disponíveis') }}</span>
+            <div class="flex items-center gap-3">
+              <button type="button" class="text-xs font-semibold text-ink3" @click="loadReminderRecipients">Atualizar</button>
+              <button type="button" class="text-xs font-semibold text-brand" @click="reminderSelected = reminderSendable.map((r) => r.id)">Marcar disponíveis</button>
+            </div>
+          </div>
+          <ul class="max-h-[290px] overflow-y-auto">
+            <li v-for="r in reminderRecipients" :key="r.id" class="border-b border-border last:border-0">
+              <label class="flex items-center gap-3 px-3 py-2" :class="r.has_whatsapp && r.reminder_status !== 'scheduled' && r.reminder_status !== 'sent' ? 'cursor-pointer' : 'opacity-60'">
+                <input type="checkbox" class="h-4 w-4 shrink-0 accent-brand" :checked="reminderSelected.includes(r.id)" :disabled="!r.has_whatsapp || r.reminder_status === 'scheduled' || r.reminder_status === 'sent'" @change="toggleReminder(r.id)" />
+                <Avatar :name="r.name" :color="r.avatar_color" :url="r.avatar_url" size="xs" />
+                <span class="min-w-0 flex-1 truncate text-[13.5px] font-medium">{{ r.name }}</span>
+                <span v-if="r.reminder_status === 'scheduled'" class="text-[11px] text-ink3">Na fila</span>
+                <span v-else-if="r.reminder_status === 'sent'" class="text-[11px] text-ink3">Enviado</span>
+                <span v-else-if="r.reminder_status === 'failed'" class="text-[11px] text-warn">Falhou · reenviar</span>
+                <span v-else-if="!r.has_whatsapp" class="text-[11px] text-ink3">Sem WhatsApp válido</span>
+              </label>
+            </li>
+            <li v-if="reminderRecipients.length === 0" class="px-3 py-5 text-center text-sm text-ink3">Nenhum membro pendente nesta etapa.</li>
+          </ul>
+        </div>
+        <p v-if="reminderLoading" class="mt-3 text-[13px] text-ink3">Carregando pendências…</p>
+        <p v-if="reminderError" role="alert" class="mt-3 text-[13px] text-danger">{{ reminderError }}</p>
+        <p v-if="reminderSuccess" class="mt-3 text-[13px] text-brand">{{ reminderSuccess }}</p>
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <span class="text-[12px] text-ink3">{{ plural(reminderChosen.length, 'membro selecionado', 'membros selecionados') }}</span>
+          <BaseButton :disabled="!reminderChosen.length || reminderSending" @click="reminderConfirming = true">Revisar lembretes</BaseButton>
+        </div>
+      </Card>
+
       <Card class="overflow-hidden">
         <div class="flex items-center justify-between px-5 pt-[18px]">
-          <SectionLabel>Enviados recentemente</SectionLabel>
+          <SectionLabel>Notificações push recentes</SectionLabel>
           <button type="button" class="inline-flex items-center gap-1 text-xs font-semibold text-ink3" @click="loadHistory">
             <NavIcon name="redo" :size="13" /> Atualizar
           </button>
@@ -278,6 +411,19 @@ function deliverySummary(b: PushBroadcast): string {
       <div class="mt-4 flex justify-end gap-2">
         <BaseButton variant="outline" size="sm" @click="confirming = false">Cancelar</BaseButton>
         <BaseButton size="sm" :loading="sending" @click="send">Enviar agora</BaseButton>
+      </div>
+    </Modal>
+
+    <Modal :open="reminderConfirming" title="Enviar lembretes pelo WhatsApp?" @close="reminderConfirming = false">
+      <p class="text-[13px] text-ink2">
+        {{ plural(reminderChosen.length, 'membro receberá', 'membros receberão') }} um lembrete de
+        {{ reminderKind === 'confirmation' ? 'confirmação de presença' : 'votação' }} da partida de
+        {{ reminderMatch ? formatDMY(reminderMatch.match_date) : '' }} com um link para o app.
+      </p>
+      <p class="mt-2 text-[12px] text-ink3">O envio entra na fila do WhatsApp. O sistema confere a pendência novamente antes de iniciar a entrega.</p>
+      <div class="mt-4 flex justify-end gap-2">
+        <BaseButton variant="outline" size="sm" @click="reminderConfirming = false">Cancelar</BaseButton>
+        <BaseButton size="sm" :loading="reminderSending" @click="sendReminders">Colocar na fila</BaseButton>
       </div>
     </Modal>
   </AdminLayout>

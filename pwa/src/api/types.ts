@@ -232,6 +232,15 @@ export interface PushRecipient {
   devices: number
 }
 
+export interface MatchReminderRecipient {
+  id: string
+  name: string
+  avatar_color: string
+  avatar_url?: string
+  has_whatsapp: boolean
+  reminder_status: '' | 'scheduled' | 'sent' | 'failed'
+}
+
 export interface PushBroadcast {
   id: string
   title: string
