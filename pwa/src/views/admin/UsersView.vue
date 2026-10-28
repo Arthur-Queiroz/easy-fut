@@ -229,7 +229,7 @@ function financialBadge(user: User) {
               >
                 <td class="px-5 py-2.5">
                   <div class="flex items-center gap-2.5">
-                    <Avatar :name="user.name" :color="user.avatar_color" size="sm" />
+                    <Avatar :name="user.name" :color="user.avatar_color" :url="user.avatar_url" size="sm" />
                     <div class="min-w-0">
                       <div class="flex items-center gap-1.5">
                         <span class="truncate text-[13.5px] font-semibold">{{ user.name }}</span>

@@ -64,6 +64,19 @@ beforeEach(() => {
   mocks.delete.mockResolvedValue({ data: { ok: true } })
 })
 
+describe('fotos e vídeos da partida', () => {
+  it('abre a foto ampliada a partir da miniatura', async () => {
+    const d = { ...detail(), media: [{ id: 'foto-1', match_id: 'm1', uploaded_by: meId, uploader_name: 'Eu', type: 'photo', url: '/api/media/files/m1/foto.jpg', caption: 'Jogo', created_at: '' }] }
+    mocks.get.mockResolvedValue({ data: d })
+    const w = mountC()
+    await flushPromises()
+    await w.get('[aria-label="Ampliar foto da partida"]').trigger('click')
+    await flushPromises()
+    expect(w.get('[role="dialog"] img').attributes('src')).toBe('/api/media/files/m1/foto.jpg')
+    w.unmount()
+  })
+})
+
 const withVotes = (votes: Record<string, string[]>) => {
   const d = detail()
   Object.assign(d.my_votes, votes)

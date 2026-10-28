@@ -8,6 +8,7 @@ type User struct {
 	Email          string     `json:"email"`
 	Phone          string     `json:"phone"`
 	AvatarColor    string     `json:"avatar_color"`
+	AvatarURL      string     `json:"avatar_url"`
 	Role           string     `json:"role"`
 	Status         string     `json:"status"`
 	Kind           string     `json:"kind"` // "member" ou "guest" (avulso, sem conta)
@@ -67,6 +68,7 @@ type ConfirmationEntry struct {
 	UserID      string     `json:"user_id"`
 	Name        string     `json:"name"`
 	AvatarColor string     `json:"avatar_color"`
+	AvatarURL   string     `json:"avatar_url"`
 	Role        string     `json:"role"`
 	Kind        string     `json:"kind"` // "member" ou "guest": selo Avulso
 	Response    string     `json:"response"`
@@ -86,6 +88,7 @@ type TeamMember struct {
 	UserID      string `json:"user_id"`
 	Name        string `json:"name"`
 	AvatarColor string `json:"avatar_color"`
+	AvatarURL   string `json:"avatar_url"`
 	Kind        string `json:"kind"` // "member" ou "guest": selo Avulso
 }
 
@@ -122,6 +125,7 @@ type Charge struct {
 	UserName        string     `json:"user_name"`
 	UserRole        string     `json:"user_role"`
 	AvatarColor     string     `json:"avatar_color"`
+	AvatarURL       string     `json:"avatar_url"`
 	ReferenceMonth  string     `json:"reference_month"` // YYYY-MM
 	AmountCents     int64      `json:"amount_cents"`    // rateio
 	PixFeeCents     int64      `json:"pix_fee_cents"`   // taxa do Pix repassada
@@ -149,6 +153,7 @@ type Winner struct {
 	UserID      string `json:"user_id"`
 	Name        string `json:"name"`
 	AvatarColor string `json:"avatar_color"`
+	AvatarURL   string `json:"avatar_url"`
 	Votes       int    `json:"votes"`
 }
 

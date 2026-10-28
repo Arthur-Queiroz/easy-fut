@@ -23,13 +23,13 @@ const (
 // delinquent = tem cobrança vencida; last_payment_at = último pagamento confirmado.
 // O e-mail é nulo para avulsos; coalesce mantém o contrato de string vazia.
 const userColumns = `
-	u.id, u.name, coalesce(u.email, ''), u.phone, u.avatar_color, u.role, u.status, u.kind, u.inactive_reason, u.created_at, u.session_version,
+	u.id, u.name, coalesce(u.email, ''), u.phone, u.avatar_color, u.avatar_url, u.role, u.status, u.kind, u.inactive_reason, u.created_at, u.session_version,
 	exists (select 1 from charges c where c.user_id = u.id and c.status = 'overdue') as delinquent,
 	(select max(c.paid_at) from charges c where c.user_id = u.id and c.status in ('paid','manual_paid')) as last_payment_at`
 
 func scanUser(row pgx.Row) (User, error) {
 	var u User
-	err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Phone, &u.AvatarColor, &u.Role, &u.Status, &u.Kind,
+	err := row.Scan(&u.ID, &u.Name, &u.Email, &u.Phone, &u.AvatarColor, &u.AvatarURL, &u.Role, &u.Status, &u.Kind,
 		&u.InactiveReason, &u.CreatedAt, &u.SessionVersion, &u.Delinquent, &u.LastPaymentAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return u, ErrNotFound
@@ -48,7 +48,7 @@ func (s *Store) UserByEmail(ctx context.Context, email string) (User, string, er
 	var hash string
 	err := s.pool.QueryRow(ctx, `select `+userColumns+`, coalesce(u.password_hash, '') from users u
 		where lower(u.email) = lower($1) and u.kind = 'member'`, email).
-		Scan(&u.ID, &u.Name, &u.Email, &u.Phone, &u.AvatarColor, &u.Role, &u.Status, &u.Kind,
+		Scan(&u.ID, &u.Name, &u.Email, &u.Phone, &u.AvatarColor, &u.AvatarURL, &u.Role, &u.Status, &u.Kind,
 			&u.InactiveReason, &u.CreatedAt, &u.SessionVersion, &u.Delinquent, &u.LastPaymentAt, &hash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return u, "", ErrNotFound
@@ -190,6 +190,23 @@ func (s *Store) UpdateUser(ctx context.Context, id string, up UserUpdate) error 
 func (s *Store) UpdatePassword(ctx context.Context, id, hash string) error {
 	_, err := s.pool.Exec(ctx, `update users set password_hash = $2, session_version = session_version + 1, updated_at = now() where id = $1`, id, hash)
 	return err
+}
+
+// SetAvatar troca a foto e devolve a URL anterior para limpeza do arquivo.
+func (s *Store) SetAvatar(ctx context.Context, id, url string) (string, error) {
+	var previous string
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback(ctx)
+	if err := tx.QueryRow(ctx, `select avatar_url from users where id = $1 for update`, id).Scan(&previous); err != nil {
+		return "", err
+	}
+	if _, err := tx.Exec(ctx, `update users set avatar_url = $2, updated_at = now() where id = $1`, id, url); err != nil {
+		return "", err
+	}
+	return previous, tx.Commit(ctx)
 }
 
 // ChangeUserStatus troca o status e registra a transição no histórico.

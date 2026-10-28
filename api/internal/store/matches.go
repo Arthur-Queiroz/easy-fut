@@ -259,7 +259,7 @@ func (s *Store) Confirm(ctx context.Context, matchID, userID, response string) e
 
 func (s *Store) Confirmations(ctx context.Context, matchID string) ([]ConfirmationEntry, error) {
 	rows, err := s.pool.Query(ctx, `
-		select c.user_id, u.name, u.avatar_color, u.role, u.kind, c.response, c.responded_at
+		select c.user_id, u.name, u.avatar_color, u.avatar_url, u.role, u.kind, c.response, c.responded_at
 		from match_confirmations c
 		join users u on u.id = c.user_id
 		where c.match_id = $1
@@ -272,7 +272,7 @@ func (s *Store) Confirmations(ctx context.Context, matchID string) ([]Confirmati
 	var entries []ConfirmationEntry
 	for rows.Next() {
 		var e ConfirmationEntry
-		if err := rows.Scan(&e.UserID, &e.Name, &e.AvatarColor, &e.Role, &e.Kind, &e.Response, &e.RespondedAt); err != nil {
+		if err := rows.Scan(&e.UserID, &e.Name, &e.AvatarColor, &e.AvatarURL, &e.Role, &e.Kind, &e.Response, &e.RespondedAt); err != nil {
 			return nil, err
 		}
 		entries = append(entries, e)
@@ -336,7 +336,7 @@ func (s *Store) ReplaceTeams(ctx context.Context, matchID string, teams []Team) 
 
 func (s *Store) Teams(ctx context.Context, matchID string) ([]Team, error) {
 	rows, err := s.pool.Query(ctx, `
-		select t.id, t.match_id, t.team_name, t.team_color, t.position, u.id, u.name, u.avatar_color, u.kind
+		select t.id, t.match_id, t.team_name, t.team_color, t.position, u.id, u.name, u.avatar_color, u.avatar_url, u.kind
 		from match_teams t
 		join match_team_members tm on tm.team_id = t.id
 		join users u on u.id = tm.user_id
@@ -352,7 +352,7 @@ func (s *Store) Teams(ctx context.Context, matchID string) ([]Team, error) {
 	for rows.Next() {
 		var t Team
 		var m TeamMember
-		if err := rows.Scan(&t.ID, &t.MatchID, &t.TeamName, &t.TeamColor, &t.Position, &m.UserID, &m.Name, &m.AvatarColor, &m.Kind); err != nil {
+		if err := rows.Scan(&t.ID, &t.MatchID, &t.TeamName, &t.TeamColor, &t.Position, &m.UserID, &m.Name, &m.AvatarColor, &m.AvatarURL, &m.Kind); err != nil {
 			return nil, err
 		}
 		i, ok := index[t.ID]

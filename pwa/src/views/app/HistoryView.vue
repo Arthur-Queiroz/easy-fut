@@ -15,7 +15,7 @@ const router = useRouter()
 
 const matches = ref<Match[]>([])
 const filter = ref('')
-const selectedMatchId = ref<string>(route.query.detalhe as string ?? '')
+const selectedMatchId = ref(typeof route.query.detalhe === 'string' ? route.query.detalhe : '')
 
 onMounted(load)
 watch(filter, load)
@@ -40,8 +40,12 @@ function setFilter(month: string) {
   filter.value = month
 }
 
-function selectMatch(match: Match) {
-  selectedMatchId.value = match.id
+function onCardClick(event: MouseEvent, match: Match) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  if (window.matchMedia('(min-width: 1024px)').matches) {
+    event.preventDefault()
+    selectedMatchId.value = match.id
+  }
 }
 
 // Chips: "Todas" + últimos 3 meses.
@@ -139,14 +143,15 @@ function statusBadge(match: Match) {
             </button>
           </div>
 
-          <div
+          <router-link
             v-for="match in matches"
             :key="match.id"
-            class="cursor-pointer text-left"
-            @click="selectMatch(match)"
+            :to="{ name: 'match-detail', params: { matchId: match.id } }"
+            class="block rounded-2xl text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            @click="onCardClick($event, match)"
           >
             <Card
-              class="px-4 py-3.5 transition-colors"
+              class="px-4 py-3.5 transition-colors hover:border-brand"
               :class="selectedMatchId === match.id ? 'border-2 border-brand' : ''"
             >
               <div class="flex items-center gap-3.5">
@@ -185,13 +190,16 @@ function statusBadge(match: Match) {
                   Destaques em votação
                 </span>
               </div>
+              <div class="mt-3 flex items-center justify-between border-t border-border pt-2.5 text-[12.5px] font-semibold text-brand">
+                <span>Ver detalhes e fotos</span>
+                <span aria-hidden="true">›</span>
+              </div>
             </Card>
-          </div>
+          </router-link>
 
           <EmptyState v-if="matches.length === 0">Nenhuma partida encontrada nesse período.</EmptyState>
         </div>
 
-        <!-- Detalhe desktop -->
         <div class="hidden lg:block">
           <Card v-if="selectedMatchId" class="p-5">
             <MatchDetailContent :match-id="selectedMatchId" />

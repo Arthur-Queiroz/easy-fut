@@ -42,7 +42,7 @@ function votersText(names: string[]): string {
         @click="emit('select', bar.id)"
       >
         <span class="flex min-w-0 items-center gap-2">
-          <Avatar :name="bar.name" :color="bar.avatarColor" size="xs" />
+          <Avatar :name="bar.name" :color="bar.avatarColor" :url="bar.avatarURL" size="xs" />
           <span class="truncate text-[12.5px]" :class="bar.winner ? 'font-bold text-ink' : 'font-medium text-ink2'">{{ bar.name }}</span>
           <NavIcon v-if="bar.winner" name="trophy" :size="13" :stroke-width="2" class="shrink-0 text-ink2" />
         </span>

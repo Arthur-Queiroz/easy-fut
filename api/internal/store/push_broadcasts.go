@@ -18,13 +18,14 @@ type PushRecipient struct {
 	Name        string `json:"name"`
 	Status      string `json:"status"`
 	AvatarColor string `json:"avatar_color"`
+	AvatarURL   string `json:"avatar_url"`
 	Devices     int    `json:"devices"`
 }
 
 // Everyone not archived can be picked; "all" reaches only active users.
 // Avulsos não fazem parte do grupo e nunca recebem avisos.
 func (s *Store) ListPushRecipients(ctx context.Context) ([]PushRecipient, error) {
-	rows, err := s.pool.Query(ctx, `select u.id,u.name,u.status,u.avatar_color,count(p.id)::int from users u
+	rows, err := s.pool.Query(ctx, `select u.id,u.name,u.status,u.avatar_color,u.avatar_url,count(p.id)::int from users u
  left join push_subscriptions p on p.user_id=u.id
  where u.status<>'archived' and u.kind='member' group by u.id order by u.name`)
 	if err != nil {
@@ -34,7 +35,7 @@ func (s *Store) ListPushRecipients(ctx context.Context) ([]PushRecipient, error)
 	var recipients []PushRecipient
 	for rows.Next() {
 		var r PushRecipient
-		if err := rows.Scan(&r.ID, &r.Name, &r.Status, &r.AvatarColor, &r.Devices); err != nil {
+		if err := rows.Scan(&r.ID, &r.Name, &r.Status, &r.AvatarColor, &r.AvatarURL, &r.Devices); err != nil {
 			return nil, err
 		}
 		recipients = append(recipients, r)

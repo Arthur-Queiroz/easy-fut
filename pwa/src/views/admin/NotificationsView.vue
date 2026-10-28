@@ -196,7 +196,7 @@ function deliverySummary(b: PushBroadcast): string {
                       :checked="selected.includes(r.id)"
                       @change="toggle(r.id)"
                     />
-                    <Avatar :name="r.name" :color="r.avatar_color" size="xs" />
+                    <Avatar :name="r.name" :color="r.avatar_color" :url="r.avatar_url" size="xs" />
                     <span class="min-w-0 flex-1 truncate text-[13.5px] font-medium">{{ r.name }}</span>
                     <span v-if="r.status === 'inactive'" class="rounded-full bg-surface2 px-2 py-[2px] text-[10.5px] font-semibold text-ink3">
                       Inativo

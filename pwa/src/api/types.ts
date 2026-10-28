@@ -6,6 +6,7 @@ export interface User {
   email: string
   phone: string
   avatar_color: string
+  avatar_url?: string
   role: 'admin' | 'player'
   status: 'active' | 'inactive' | 'archived'
   kind: UserKind
@@ -82,6 +83,7 @@ export interface ConfirmationEntry {
   user_id: string
   name: string
   avatar_color: string
+  avatar_url?: string
   role: 'admin' | 'player'
   kind: UserKind
   response: Response
@@ -101,6 +103,7 @@ export interface TeamMember {
   user_id: string
   name: string
   avatar_color: string
+  avatar_url?: string
   kind: UserKind
 }
 
@@ -120,6 +123,7 @@ export interface Charge {
   user_name: string
   user_role: 'admin' | 'player'
   avatar_color: string
+  avatar_url?: string
   batch_id: string
   batch_kind: 'monthly' | 'match'
   batch_title: string
@@ -164,6 +168,7 @@ export interface Winner {
   user_id: string
   name: string
   avatar_color: string
+  avatar_url?: string
   votes: number
 }
 
@@ -223,6 +228,7 @@ export interface PushRecipient {
   name: string
   status: User['status']
   avatar_color: string
+  avatar_url?: string
   devices: number
 }
 

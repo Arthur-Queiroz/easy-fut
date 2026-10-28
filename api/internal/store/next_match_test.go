@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 // TestNextMatchIncludesVoting cobre o FUT-002: partida em 'voting' aparece
@@ -13,11 +14,11 @@ func TestNextMatchIncludesVoting(t *testing.T) {
 	ctx := context.Background()
 
 	// Partida de 3 dias atrás, em votação (aberta automaticamente pelo FUT-001).
-	inVoting := votingTestMatch(t, s, "voting", "2026-10-15", "10:00")
+	inVoting := votingTestMatch(t, s, "voting", time.Now().AddDate(0, 0, -3).Format("2006-01-02"), "10:00")
 	// Partida futura em aberto.
-	futureOpen := votingTestMatch(t, s, "open", "2026-10-25", "10:00")
+	futureOpen := votingTestMatch(t, s, "open", time.Now().AddDate(0, 0, 7).Format("2006-01-02"), "10:00")
 	// Partida antiga finalizada: nunca é candidata.
-	oldFinished := votingTestMatch(t, s, "finished", "2026-10-01", "10:00")
+	oldFinished := votingTestMatch(t, s, "finished", time.Now().AddDate(0, 0, -30).Format("2006-01-02"), "10:00")
 
 	// Com votação em aberto, ela vence a futura em aberto.
 	next, err := s.NextMatch(ctx)

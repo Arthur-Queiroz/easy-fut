@@ -80,7 +80,7 @@ async function logout() {
       </router-link>
 
       <div class="hidden items-center gap-2.5 border-t border-white/10 px-2 py-2.5 lg:flex">
-        <Avatar :name="auth.user?.name ?? ''" color="#2EE07C" size="sm" />
+        <Avatar :name="auth.user?.name ?? ''" :url="auth.user?.avatar_url" color="#2EE07C" size="sm" />
         <div class="min-w-0 flex-1">
           <div class="truncate text-[13px] font-semibold text-white">{{ auth.firstName }}</div>
           <div class="text-[10.5px] font-medium text-white/50">Administrador</div>

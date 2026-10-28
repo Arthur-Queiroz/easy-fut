@@ -200,6 +200,7 @@ type VoteTally struct {
 	CandidateID string `json:"candidate_id"`
 	Name        string `json:"name"`
 	AvatarColor string `json:"avatar_color"`
+	AvatarURL   string `json:"avatar_url"`
 	Votes       int    `json:"votes"`
 }
 
@@ -224,7 +225,7 @@ type MatchVoteSummary struct {
 
 func (s *Store) VoteTallyByMatch(ctx context.Context, matchID string) ([]VoteTally, error) {
 	rows, err := s.pool.Query(ctx, `
-		select cats.category, c.candidate_id, u.name, u.avatar_color, c.votes
+		select cats.category, c.candidate_id, u.name, u.avatar_color, u.avatar_url, c.votes
 		from (
 			select 'top_scorer' as category, 1 as ord
 			union all select 'worst_player', 2
@@ -244,7 +245,7 @@ func (s *Store) VoteTallyByMatch(ctx context.Context, matchID string) ([]VoteTal
 	var out []VoteTally
 	for rows.Next() {
 		var t VoteTally
-		if err := rows.Scan(&t.Category, &t.CandidateID, &t.Name, &t.AvatarColor, &t.Votes); err != nil {
+		if err := rows.Scan(&t.Category, &t.CandidateID, &t.Name, &t.AvatarColor, &t.AvatarURL, &t.Votes); err != nil {
 			return nil, err
 		}
 		out = append(out, t)
@@ -345,7 +346,7 @@ func (s *Store) VoteResults(ctx context.Context, matchID string) ([]VoteResult, 
 				from votes v where v.match_id = $1 and v.category = $2
 				group by v.candidate_id
 			)
-			select t.candidate_id, u.name, u.avatar_color, t.votes,
+			select t.candidate_id, u.name, u.avatar_color, u.avatar_url, t.votes,
 			       (select coalesce(sum(votes), 0) from tallies) as total
 			from tallies t join users u on u.id = t.candidate_id
 			where t.votes = (select max(votes) from tallies)
@@ -356,7 +357,7 @@ func (s *Store) VoteResults(ctx context.Context, matchID string) ([]VoteResult, 
 		for rows.Next() {
 			var w Winner
 			var total int
-			if err := rows.Scan(&w.UserID, &w.Name, &w.AvatarColor, &w.Votes, &total); err != nil {
+			if err := rows.Scan(&w.UserID, &w.Name, &w.AvatarColor, &w.AvatarURL, &w.Votes, &total); err != nil {
 				rows.Close()
 				return nil, err
 			}

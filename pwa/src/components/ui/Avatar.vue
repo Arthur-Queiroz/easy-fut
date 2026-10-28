@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { initials } from '../../lib/format'
 import { safeColor } from '../../lib/security'
 
 const props = withDefaults(
-  defineProps<{ name: string; color: string; size?: 'xs' | 'sm' | 'md' | 'lg'; ring?: boolean }>(),
+  defineProps<{ name: string; color: string; url?: string; size?: 'xs' | 'sm' | 'md' | 'lg'; ring?: boolean }>(),
   { size: 'sm', ring: false },
 )
 
@@ -19,6 +19,12 @@ const sizeClass = computed(
 )
 
 const safeBgColor = computed(() => safeColor(props.color))
+const imageFailed = ref(false)
+watch(() => props.url, () => { imageFailed.value = false })
+const imageURL = computed(() => {
+  const url = props.url ?? ''
+  return /^\/api\/avatars\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png)$/.test(url) ? url : ''
+})
 
 // Texto claro ou escuro conforme a luminância da cor de fundo.
 const textColor = computed(() => {
@@ -33,10 +39,11 @@ const textColor = computed(() => {
 
 <template>
   <div
-    class="flex shrink-0 items-center justify-center rounded-full font-semibold"
+    class="flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold"
     :class="[sizeClass, ring ? 'border-2 border-white/30' : '']"
     :style="{ backgroundColor: safeBgColor, color: textColor }"
   >
-    {{ initials(name) }}
+    <img v-if="imageURL && !imageFailed" :src="imageURL" :alt="name" class="h-full w-full object-cover" @error="imageFailed = true" />
+    <span v-else>{{ initials(name) }}</span>
   </div>
 </template>

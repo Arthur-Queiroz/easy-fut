@@ -66,7 +66,7 @@ const activityIcon = (kind: string) => {
           <div class="text-[13.5px] text-white/65">Bora pra bola.</div>
         </div>
         <router-link to="/perfil" aria-label="Meu perfil">
-          <Avatar :name="auth.user?.name ?? ''" color="#2EE07C" size="md" ring />
+          <Avatar :name="auth.user?.name ?? ''" :url="auth.user?.avatar_url" color="#2EE07C" size="md" ring />
         </router-link>
       </div>
     </template>
@@ -131,6 +131,7 @@ const activityIcon = (kind: string) => {
                   :key="entry.user_id"
                   :name="entry.name"
                   :color="entry.avatar_color"
+                  :url="entry.avatar_url"
                   size="xs"
                   class="border-2 border-surface"
                   :class="i > 0 ? '-ml-2' : ''"

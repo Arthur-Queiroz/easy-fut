@@ -126,13 +126,14 @@ const matchOptions = computed<MatchOption[]>(() =>
 )
 const filterMatch = (o: MatchOption, q: string) => matchMatchesQuery(o.match, q)
 
-type PlayerOption = SearchOption & { color: string }
+type PlayerOption = SearchOption & { color: string; avatarURL?: string }
 const playerOptions = computed<PlayerOption[]>(() =>
   participants.value.map((p) => ({
     value: p.user_id,
     label: p.name,
     hint: voterIds.value.has(p.user_id) ? 'votou' : 'não votou',
     color: p.avatar_color,
+    avatarURL: p.avatar_url,
   })),
 )
 const player = computed(() => participants.value.find((p) => p.user_id === playerId.value) ?? null)
@@ -175,6 +176,12 @@ const colorById = computed(() => {
   const map = new Map<string, string>()
   for (const p of participants.value) map.set(p.user_id, p.avatar_color)
   for (const t of tally.value) map.set(t.candidate_id, t.avatar_color)
+  return map
+})
+const avatarById = computed(() => {
+  const map = new Map<string, string>()
+  for (const p of participants.value) if (p.avatar_url) map.set(p.user_id, p.avatar_url)
+  for (const t of tally.value) if (t.avatar_url) map.set(t.candidate_id, t.avatar_url)
   return map
 })
 const shownVotes = computed(() =>
@@ -263,11 +270,11 @@ const names = (list: { name: string }[]) => list.map((x) => x.name).join(', ')
           empty-text="Ninguém com esse nome nesta partida."
         >
           <template #selected="{ option }">
-            <Avatar :name="option.label" :color="option.color" size="xs" />
+            <Avatar :name="option.label" :color="option.color" :url="option.avatarURL" size="xs" />
             <span class="truncate font-semibold">{{ option.label }}</span>
           </template>
           <template #option="{ option }">
-            <Avatar :name="option.label" :color="option.color" size="xs" />
+            <Avatar :name="option.label" :color="option.color" :url="option.avatarURL" size="xs" />
             <span class="truncate font-medium">{{ option.label }}</span>
             <span class="ml-auto shrink-0 text-[12px]" :class="option.hint === 'votou' ? 'text-ink3' : 'font-semibold text-warn'">{{ option.hint }}</span>
           </template>
@@ -313,7 +320,7 @@ const names = (list: { name: string }[]) => list.map((x) => x.name).join(', ')
             <div class="font-condensed text-[38px] font-bold leading-[1.05]">{{ notVoted.length }}</div>
             <div v-if="notVoted.length" class="mt-1 flex items-center gap-2">
               <div class="flex shrink-0 -space-x-1.5">
-                <Avatar v-for="p in notVoted.slice(0, 5)" :key="p.user_id" :name="p.name" :color="p.avatar_color" size="xs" ring />
+                <Avatar v-for="p in notVoted.slice(0, 5)" :key="p.user_id" :name="p.name" :color="p.avatar_color" :url="p.avatar_url" size="xs" ring />
               </div>
               <span class="truncate text-[12px] text-ink2" :title="names(notVoted)">{{ names(notVoted) }}</span>
             </div>
@@ -324,7 +331,7 @@ const names = (list: { name: string }[]) => list.map((x) => x.name).join(', ')
         <!-- Jogador escolhido -->
         <Card v-if="player && summary" class="p-4" data-test="player-panel">
           <div class="flex flex-wrap items-center gap-3">
-            <Avatar :name="player.name" :color="player.avatar_color" size="md" />
+            <Avatar :name="player.name" :color="player.avatar_color" :url="player.avatar_url" size="md" />
             <div class="min-w-0">
               <div class="truncate text-[15px] font-bold">{{ player.name }}</div>
               <div class="text-[12px] text-ink2">
@@ -442,13 +449,13 @@ const names = (list: { name: string }[]) => list.map((x) => x.name).join(', ')
                 <tr v-for="(row, i) in shownVotes" :key="i" class="border-t border-border" data-test="vote-row">
                   <td class="py-2 pr-2">
                     <span class="flex min-w-0 items-center gap-2">
-                      <Avatar :name="row.voter_name" :color="colorById.get(row.voter_id) ?? '#8ca094'" size="xs" />
+                      <Avatar :name="row.voter_name" :color="colorById.get(row.voter_id) ?? '#8ca094'" :url="avatarById.get(row.voter_id)" size="xs" />
                       <span class="truncate font-semibold">{{ row.voter_name }}</span>
                     </span>
                   </td>
                   <td class="py-2 pr-2">
                     <span class="flex min-w-0 items-center gap-2">
-                      <Avatar :name="row.candidate_name" :color="colorById.get(row.candidate_id) ?? '#8ca094'" size="xs" />
+                      <Avatar :name="row.candidate_name" :color="colorById.get(row.candidate_id) ?? '#8ca094'" :url="avatarById.get(row.candidate_id)" size="xs" />
                       <span class="min-w-0">
                         <span class="block truncate">{{ row.candidate_name }}</span>
                         <span class="block truncate text-[11px] text-ink3 sm:hidden">{{ VOTE_CATEGORY_LABELS[row.category] }}</span>

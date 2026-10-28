@@ -77,7 +77,7 @@ async function logout() {
 
       <router-link to="/perfil" class="flex items-center gap-2.5 rounded-[11px] px-2 py-1 transition-colors hover:bg-white/10">
         <span class="text-[13px] font-medium text-white/70">{{ auth.firstName }}</span>
-        <Avatar :name="auth.user?.name ?? ''" color="#2EE07C" size="sm" />
+        <Avatar :name="auth.user?.name ?? ''" :url="auth.user?.avatar_url" color="#2EE07C" size="sm" />
       </router-link>
 
       <button
