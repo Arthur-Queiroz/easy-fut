@@ -83,4 +83,31 @@ describe('admin notifications', () => {
     expect(wrapper.text()).toContain('ainda não estão configuradas')
     expect(sendButton(wrapper).attributes('disabled')).toBeDefined()
   })
+
+  it('queues WhatsApp reminders only for members still pending with a valid number', async () => {
+    const deadline = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+    mocks.get.mockImplementation((url: string) => Promise.resolve({ data:
+      url === '/push/config' ? { enabled: false } :
+      url === '/matches' ? [{ id: 'match-1', match_date: '2026-10-28', venue: 'Arena 1', status: 'open', confirmation_deadline: deadline }] :
+      url === '/admin/matches/match-1/whatsapp-reminders' ? [
+        { id: 'a', name: 'Ana', avatar_color: '#123456', has_whatsapp: true, reminder_status: '' },
+        { id: 'b', name: 'Bruno', avatar_color: '#123456', has_whatsapp: false, reminder_status: '' },
+        { id: 'c', name: 'Caio', avatar_color: '#123456', has_whatsapp: true, reminder_status: 'sent' },
+      ] : url === '/admin/push/recipients' ? recipients : [],
+    }))
+    mocks.post.mockResolvedValue({ data: { queued: 1 } })
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.text()).toContain('1 membro disponível')
+    expect(wrapper.text()).toContain('Sem WhatsApp válido')
+    expect(wrapper.text()).toContain('Enviado')
+    await wrapper.findAll('button').find((b) => b.text() === 'Marcar disponíveis')!.trigger('click')
+    await wrapper.findAll('button').find((b) => b.text() === 'Revisar lembretes')!.trigger('click')
+    await wrapper.findAll('button').find((b) => b.text() === 'Colocar na fila')!.trigger('click')
+    await flushPromises()
+    expect(mocks.post).toHaveBeenCalledWith('/admin/matches/match-1/whatsapp-reminders', {
+      kind: 'confirmation', user_ids: ['a'],
+    })
+    expect(wrapper.text()).toContain('1 lembrete na fila do WhatsApp')
+  })
 })

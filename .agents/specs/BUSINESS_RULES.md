@@ -226,6 +226,14 @@ Regras completas em `.agents/specs/design/2026-10-19-participacao-avulsa.md`
 - Um aparelho fica inscrito em uma conta por vez; logout remove a inscrição.
 - **WhatsApp:** fila `notifications` enviada a cada 5 minutos; envio manual
   de convite e de lembrete de cobrança pelo admin.
+- **Lembretes manuais de partida por WhatsApp:** em Admin → Avisos, o admin
+  escolhe uma partida e membros pendentes. Presença: somente membros ativos
+  sem resposta enquanto a confirmação está aberta. Votação: somente membros
+  ativos que confirmaram presença e ainda não registraram nenhum voto enquanto
+  a votação está aberta. Avulsos não entram nessa lista. Só números brasileiros
+  válidos podem ser selecionados. Um lembrete por membro, partida e tipo fica
+  na fila existente; se a entrega falhar, o admin pode reenfileirar. Antes de
+  enviar, o worker confere novamente a pendência para evitar lembrete obsoleto.
 
 Detalhes operacionais em `api/PUSH_NOTIFICATIONS.md` e
 `pwa/PUSH_NOTIFICATIONS.md`.

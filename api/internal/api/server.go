@@ -161,6 +161,8 @@ func (s *Server) Handler() http.Handler {
 			r.Get("/admin/push/recipients", s.handleListPushRecipients)
 			r.Get("/admin/push/broadcasts", s.handleListPushBroadcasts)
 			r.Post("/admin/push/broadcasts", s.handleCreatePushBroadcast)
+			r.Get("/admin/matches/{id}/whatsapp-reminders", s.handleMatchReminderRecipients)
+			r.Post("/admin/matches/{id}/whatsapp-reminders", s.handleQueueMatchReminders)
 
 			// Participação avulsa — admin (fase B)
 			r.Put("/admin/matches/{id}/guest-sale", s.handleGuestSale)

@@ -31,7 +31,18 @@ func (s *Store) DueNotifications(ctx context.Context) ([]Notification, error) {
 		from notifications n
 		left join charges c on c.id = n.charge_id
 		where n.status = 'scheduled' and n.scheduled_at <= now()
-		  and (n.charge_id is null or c.status in ('pending', 'overdue'))`)
+		  and (n.charge_id is null or c.status in ('pending', 'overdue'))
+		  and (n.match_id is null or exists (
+		      select 1 from matches m
+		      join match_confirmations mc on mc.match_id=m.id and mc.user_id=n.user_id
+		      join users u on u.id=n.user_id
+		      where m.id=n.match_id and u.kind='member' and u.status='active'
+		        and ((n.reminder_kind='confirmation' and m.status='open'
+		              and m.confirmation_deadline>now() and mc.response='no_response')
+		         or (n.reminder_kind='vote' and m.status='voting'
+		              and m.voting_closes_at>now() and mc.response='going'
+		              and not exists (select 1 from votes v where v.match_id=m.id and v.voter_id=n.user_id)))
+		  ))`)
 	if err != nil {
 		return nil, err
 	}

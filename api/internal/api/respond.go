@@ -11,6 +11,7 @@ import (
 	"futdarapaziada/api/internal/billing"
 	"futdarapaziada/api/internal/guests"
 	"futdarapaziada/api/internal/matches"
+	"futdarapaziada/api/internal/notices"
 	"futdarapaziada/api/internal/store"
 )
 
@@ -43,6 +44,12 @@ func writeStoreError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, store.ErrNotFound), isMalformedID(err):
 		writeError(w, http.StatusNotFound, "registro não encontrado")
+	case errors.Is(err, notices.ErrInvalidReminderKind):
+		writeError(w, http.StatusBadRequest, err.Error())
+	case errors.Is(err, notices.ErrReminderClosed):
+		writeError(w, http.StatusConflict, err.Error())
+	case errors.Is(err, store.ErrNoReminderRecipients):
+		writeError(w, http.StatusUnprocessableEntity, err.Error())
 	case errors.Is(err, store.ErrConfirmationClosed):
 		writeError(w, http.StatusConflict, err.Error())
 	case errors.Is(err, store.ErrBatchExists):
