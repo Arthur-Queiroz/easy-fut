@@ -68,30 +68,30 @@ function toggleResponse() {
       <MatchDetailContent :match-id="match.id" />
     </div>
 
-    <div v-else-if="match" class="flex flex-col gap-3 px-4 pt-4 lg:px-0 lg:pt-0">
+    <div v-else-if="match" class="flex flex-col gap-3 px-4 pt-4 lg:min-h-[calc(100dvh-3.5rem)] lg:justify-center lg:gap-5 lg:px-0 lg:pt-0">
       <!-- Cabeçalho desktop -->
       <div class="hidden items-start justify-between gap-5 lg:flex">
         <div>
-          <div class="text-2xl font-extrabold">{{ formatDateLong(match.match_date) }} · {{ formatHour(match.start_time) }}</div>
-          <div class="mt-1 text-[14px] text-ink2">{{ match.venue }}<template v-if="match.address"> · {{ match.address }}</template></div>
+          <div class="text-2xl font-extrabold lg:text-3xl">{{ formatDateLong(match.match_date) }} · {{ formatHour(match.start_time) }}</div>
+          <div class="mt-1 text-[14px] text-ink2 lg:text-[15px]">{{ match.venue }}<template v-if="match.address"> · {{ match.address }}</template></div>
         </div>
         <div class="flex shrink-0 items-center gap-3">
           <span
             v-if="myResponse === 'going'"
-            class="inline-flex items-center gap-1.5 rounded-full bg-brandSoft px-3 py-[5px] text-[13px] font-semibold text-brand"
+            class="inline-flex items-center gap-1.5 rounded-full bg-brandSoft px-3 py-[5px] text-[14px] font-semibold text-brand"
           >✓ Você vai participar</span>
           <span
             v-else-if="myResponse === 'not_going'"
-            class="inline-flex items-center gap-1.5 rounded-full bg-dangerBg px-3 py-[5px] text-[13px] font-semibold text-danger"
+            class="inline-flex items-center gap-1.5 rounded-full bg-dangerBg px-3 py-[5px] text-[14px] font-semibold text-danger"
           >✕ Você não vai</span>
           <span
             v-else
-            class="inline-flex items-center gap-1.5 rounded-full bg-warnBg px-3 py-[5px] text-[13px] font-semibold text-warn"
+            class="inline-flex items-center gap-1.5 rounded-full bg-warnBg px-3 py-[5px] text-[14px] font-semibold text-warn"
           >! Você ainda não respondeu</span>
           <button
             v-if="match.status === 'open'"
             type="button"
-            class="text-[13px] font-semibold text-brand"
+            class="text-[14px] font-semibold text-brand"
             @click="toggleResponse"
           >
             Alterar
@@ -124,17 +124,17 @@ function toggleResponse() {
         <span v-else class="text-[12px] text-ink3">Confirmação encerrada</span>
       </Card>
 
-      <div class="grid gap-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+      <div class="grid gap-3 lg:gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
         <!-- Confirmados -->
-        <Card class="p-4 lg:p-5">
-          <div class="mb-[11px] flex items-center justify-between lg:mb-4 lg:border-b lg:border-border lg:pb-3">
-            <SectionLabel>Confirmados</SectionLabel>
-            <span class="font-condensed text-[15px] font-bold text-brand">{{ going.length }}</span>
+        <Card class="p-4 lg:p-6">
+          <div class="mb-[11px] flex items-center justify-between lg:mb-5 lg:border-b lg:border-border lg:pb-4">
+            <SectionLabel class="lg:text-xs">Confirmados</SectionLabel>
+            <span class="font-condensed text-[15px] font-bold text-brand lg:text-lg">{{ going.length }}</span>
           </div>
-          <div class="grid grid-cols-2 gap-2 2xl:grid-cols-3">
-            <div v-for="entry in going" :key="entry.user_id" class="flex items-center gap-2">
-              <Avatar :name="entry.name" :color="entry.avatar_color" :url="entry.avatar_url" size="xs" />
-              <span class="truncate text-[13px] font-medium">
+          <div class="grid grid-cols-2 gap-2 lg:gap-x-5 lg:gap-y-3 2xl:grid-cols-3">
+            <div v-for="entry in going" :key="entry.user_id" class="flex min-w-0 items-center gap-2 lg:gap-3">
+              <Avatar :name="entry.name" :color="entry.avatar_color" :url="entry.avatar_url" size="xs" class="lg:h-8 lg:w-8 lg:text-xs" />
+              <span class="truncate text-[13px] font-medium lg:text-[14px]">
                 {{ entry.name }}
                 <span
                   v-if="entry.role === 'admin'"
@@ -148,28 +148,28 @@ function toggleResponse() {
 
         <!-- Não vão / sem resposta -->
         <div class="grid grid-cols-2 gap-3 lg:contents">
-          <Card class="px-4 py-3.5 lg:p-5">
-            <div class="mb-[9px] flex items-center justify-between lg:mb-4 lg:border-b lg:border-border lg:pb-3">
-              <SectionLabel>Não vão</SectionLabel>
-              <span class="font-condensed text-[15px] font-bold text-danger">{{ notGoing.length }}</span>
+          <Card class="px-4 py-3.5 lg:p-6">
+            <div class="mb-[9px] flex items-center justify-between lg:mb-5 lg:border-b lg:border-border lg:pb-4">
+              <SectionLabel class="lg:text-xs">Não vão</SectionLabel>
+              <span class="font-condensed text-[15px] font-bold text-danger lg:text-lg">{{ notGoing.length }}</span>
             </div>
-            <div class="flex flex-col gap-[7px]">
-              <div v-for="entry in notGoing" :key="entry.user_id" class="flex items-center gap-2 opacity-75">
-                <Avatar :name="entry.name" color="#8CA094" size="xs" />
-                <span class="truncate text-[12.5px] font-medium">{{ entry.name }}</span>
+            <div class="flex flex-col gap-[7px] lg:gap-3">
+              <div v-for="entry in notGoing" :key="entry.user_id" class="flex min-w-0 items-center gap-2 opacity-75 lg:gap-3">
+                <Avatar :name="entry.name" color="#8CA094" size="xs" class="lg:h-8 lg:w-8 lg:text-xs" />
+                <span class="truncate text-[12.5px] font-medium lg:text-[14px]">{{ entry.name }}</span>
               </div>
             </div>
             <p v-if="notGoing.length === 0" class="text-sm text-ink3">Ninguém recusou ainda.</p>
           </Card>
-          <div class="rounded-2xl border border-dashed border-border bg-surface px-4 py-3.5 lg:col-span-2 lg:p-5">
-            <div class="mb-[9px] flex items-center justify-between lg:mb-4 lg:border-b lg:border-border lg:pb-3">
-              <SectionLabel>Sem resposta</SectionLabel>
-              <span class="font-condensed text-[15px] font-bold text-warn">{{ noResponse.length }}</span>
+          <div class="rounded-2xl border border-dashed border-border bg-surface px-4 py-3.5 lg:col-span-2 lg:p-6">
+            <div class="mb-[9px] flex items-center justify-between lg:mb-5 lg:border-b lg:border-border lg:pb-4">
+              <SectionLabel class="lg:text-xs">Sem resposta</SectionLabel>
+              <span class="font-condensed text-[15px] font-bold text-warn lg:text-lg">{{ noResponse.length }}</span>
             </div>
-            <div class="grid gap-y-[7px] lg:grid-cols-3 lg:gap-x-5 xl:grid-cols-4">
-              <div v-for="entry in noResponse" :key="entry.user_id" class="flex min-w-0 items-center gap-2 text-ink2">
-                <Avatar :name="entry.name" color="#8CA094" size="xs" />
-                <span class="truncate text-[12.5px] font-medium">{{ entry.name }}</span>
+            <div class="grid gap-y-[7px] lg:grid-cols-3 lg:gap-x-5 lg:gap-y-3 xl:grid-cols-4">
+              <div v-for="entry in noResponse" :key="entry.user_id" class="flex min-w-0 items-center gap-2 text-ink2 lg:gap-3">
+                <Avatar :name="entry.name" color="#8CA094" size="xs" class="lg:h-8 lg:w-8 lg:text-xs" />
+                <span class="truncate text-[12.5px] font-medium lg:text-[14px]">{{ entry.name }}</span>
               </div>
             </div>
             <p v-if="noResponse.length === 0" class="text-sm text-ink3">Todos já responderam.</p>
@@ -184,7 +184,7 @@ function toggleResponse() {
       >
         Ver times sorteados
       </router-link>
-      <p v-else class="text-center text-xs text-ink3">Os times são sorteados quando a confirmação encerrar</p>
+      <p v-else class="text-center text-xs text-ink3 lg:text-[13px]">Os times são sorteados quando a confirmação encerrar</p>
     </div>
 
     <EmptyState v-else>Nenhuma partida agendada. Aguarde o administrador abrir a próxima.</EmptyState>
