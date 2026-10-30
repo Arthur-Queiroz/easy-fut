@@ -42,7 +42,7 @@ function setFilter(month: string) {
 
 function onCardClick(event: MouseEvent, match: Match) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
-  if (window.matchMedia('(min-width: 1024px)').matches) {
+  if (window.matchMedia('(min-width: 1280px)').matches) {
     event.preventDefault()
     selectedMatchId.value = match.id
   }
@@ -84,23 +84,23 @@ function statusBadge(match: Match) {
 </script>
 
 <template>
-  <MobileShell>
+  <MobileShell wide>
     <template #header>
       <div class="text-[22px] font-bold">Histórico</div>
       <div class="text-[13.5px] text-white/65">Todas as partidas do grupo</div>
     </template>
 
-    <div class="flex flex-col gap-3 px-4 pt-3.5 lg:px-0 lg:pt-0">
+    <div class="flex flex-col gap-3 px-4 pt-3.5 lg:min-h-[calc(100dvh-3.5rem)] lg:justify-center lg:gap-5 lg:px-0 lg:pt-0">
       <!-- Cabeçalho desktop -->
       <div class="hidden items-center justify-between lg:flex">
         <div>
-          <div class="text-2xl font-extrabold">Histórico</div>
-          <div class="mt-1 text-[14px] text-ink2">{{ matches.length }} partidas registradas</div>
+          <div class="text-[30px] font-extrabold leading-tight">Histórico</div>
+          <div class="mt-1 text-[15px] text-ink2">{{ matches.length }} partidas registradas</div>
         </div>
         <div class="flex gap-2">
           <button
             type="button"
-            class="whitespace-nowrap rounded-full px-4 py-[7px] text-[12.5px]"
+            class="whitespace-nowrap rounded-full px-4 py-2 text-[13px]"
             :class="filter === '' ? 'bg-ink font-semibold text-canvas' : 'border border-border bg-surface font-medium text-ink2'"
             @click="setFilter('')"
           >
@@ -110,7 +110,7 @@ function statusBadge(match: Match) {
             v-for="chip in monthChips"
             :key="chip.value"
             type="button"
-            class="whitespace-nowrap rounded-full px-4 py-[7px] text-[12.5px]"
+            class="whitespace-nowrap rounded-full px-4 py-2 text-[13px]"
             :class="filter === chip.value ? 'bg-ink font-semibold text-canvas' : 'border border-border bg-surface font-medium text-ink2'"
             @click="setFilter(chip.value)"
           >
@@ -119,9 +119,9 @@ function statusBadge(match: Match) {
         </div>
       </div>
 
-      <div class="grid gap-3 lg:grid-cols-[1fr_1.15fr] lg:items-start">
+      <div class="grid min-w-0 gap-3 lg:gap-5 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] xl:items-start">
         <!-- Lista -->
-        <div class="flex flex-col gap-3">
+        <div class="flex min-w-0 flex-col gap-3 lg:gap-4">
           <div class="flex gap-2 overflow-x-auto pb-1 lg:hidden">
             <button
               type="button"
@@ -151,35 +151,35 @@ function statusBadge(match: Match) {
             @click="onCardClick($event, match)"
           >
             <Card
-              class="px-4 py-3.5 transition-colors hover:border-brand"
+              class="px-4 py-3.5 transition-colors hover:border-brand lg:p-5"
               :class="selectedMatchId === match.id ? 'border-2 border-brand' : ''"
             >
-              <div class="flex items-center gap-3.5">
-                <div class="w-[52px] shrink-0 rounded-[11px] border border-border bg-surface2 py-1.5 text-center">
-                  <div class="font-condensed text-[22px] font-bold leading-none">{{ dayOfMonth(match.match_date) }}</div>
-                  <div class="text-[9.5px] font-medium text-ink3">{{ monthShort(match.match_date) }}</div>
+              <div class="flex items-center gap-3.5 lg:gap-4">
+                <div class="w-[52px] shrink-0 rounded-[11px] border border-border bg-surface2 py-1.5 text-center lg:w-16 lg:py-2.5">
+                  <div class="font-condensed text-[22px] font-bold leading-none lg:text-[27px]">{{ dayOfMonth(match.match_date) }}</div>
+                  <div class="text-[9.5px] font-medium text-ink3 lg:text-[11px]">{{ monthShort(match.match_date) }}</div>
                 </div>
                 <div class="min-w-0 flex-1">
-                  <div class="truncate text-[15px] font-semibold">{{ match.venue }}</div>
-                  <div class="text-[12.5px] text-ink2">
+                  <div class="truncate text-[15px] font-semibold lg:text-[16px]">{{ match.venue }}</div>
+                  <div class="text-[12.5px] text-ink2 lg:text-[14px]">
                     {{ match.going_count }} jogadores<template v-if="match.media_count"> · {{ match.media_count }} mídias</template>
                   </div>
                 </div>
-                <span class="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-semibold" :class="statusBadge(match).cls">
+                <span class="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-semibold lg:px-3 lg:py-1 lg:text-[12px]" :class="statusBadge(match).cls">
                   {{ statusBadge(match).label }}
                 </span>
               </div>
-              <div v-if="match.status === 'finished' && (winners(match, 'top_scorer') || winners(match, 'worst_player'))" class="mt-[11px] flex flex-wrap gap-2">
+              <div v-if="match.status === 'finished' && (winners(match, 'top_scorer') || winners(match, 'worst_player'))" class="mt-[11px] flex flex-wrap gap-2 lg:mt-4">
                 <span
                   v-if="winners(match, 'top_scorer')"
-                  class="inline-flex items-center gap-1.5 rounded-[9px] bg-brandSoft px-[11px] py-[5px] text-xs font-semibold text-brand"
+                  class="inline-flex items-center gap-1.5 rounded-[9px] bg-brandSoft px-[11px] py-[5px] text-xs font-semibold text-brand lg:text-[13px]"
                 >
                   <NavIcon name="trophy" :size="13" />
                   Artilheiro · {{ winners(match, 'top_scorer') }}
                 </span>
                 <span
                   v-if="winners(match, 'worst_player')"
-                  class="inline-flex items-center gap-1.5 rounded-[9px] bg-warnBg px-[11px] py-[5px] text-xs font-semibold text-warn"
+                  class="inline-flex items-center gap-1.5 rounded-[9px] bg-warnBg px-[11px] py-[5px] text-xs font-semibold text-warn lg:text-[13px]"
                 >
                   🥴 Perna de pau · {{ winners(match, 'worst_player') }}
                 </span>
@@ -190,7 +190,7 @@ function statusBadge(match: Match) {
                   Destaques em votação
                 </span>
               </div>
-              <div class="mt-3 flex items-center justify-between border-t border-border pt-2.5 text-[12.5px] font-semibold text-brand">
+              <div class="mt-3 flex items-center justify-between border-t border-border pt-2.5 text-[12.5px] font-semibold text-brand lg:mt-4 lg:pt-3 lg:text-[13px]">
                 <span>Ver detalhes e fotos</span>
                 <span aria-hidden="true">›</span>
               </div>
@@ -200,12 +200,12 @@ function statusBadge(match: Match) {
           <EmptyState v-if="matches.length === 0">Nenhuma partida encontrada nesse período.</EmptyState>
         </div>
 
-        <div class="hidden lg:block">
-          <Card v-if="selectedMatchId" class="p-5">
+        <div class="hidden min-w-0 xl:sticky xl:top-7 xl:block">
+          <Card v-if="selectedMatchId" class="max-h-[calc(100dvh-3.5rem)] overflow-y-auto p-5 2xl:p-6">
             <MatchDetailContent :match-id="selectedMatchId" />
           </Card>
-          <Card v-else class="flex h-full min-h-[400px] flex-col items-center justify-center p-5 text-center">
-            <div class="text-ink3">Selecione uma partida ao lado para ver detalhes, votar e fotos.</div>
+          <Card v-else class="flex min-h-[440px] flex-col items-center justify-center p-6 text-center">
+            <div class="max-w-sm text-[15px] text-ink3">Selecione uma partida ao lado para ver detalhes, votar e fotos.</div>
           </Card>
         </div>
       </div>

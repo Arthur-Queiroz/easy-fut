@@ -75,26 +75,26 @@ function statusBadge(charge: Charge): { tone: 'success' | 'warn' | 'danger' | 'n
 </script>
 
 <template>
-  <MobileShell>
+  <MobileShell wide>
     <template #header>
       <div class="text-[22px] font-bold">Pagamentos</div>
       <div class="text-[13.5px] text-white/65">Mensalidades e partidas avulsas</div>
     </template>
 
-    <div class="flex flex-col gap-3.5 px-4 pt-4 lg:px-0 lg:pt-0">
+    <div class="flex flex-col gap-3.5 px-4 pt-4 lg:min-h-[calc(100dvh-3.5rem)] lg:justify-center lg:gap-5 lg:px-0 lg:pt-0">
       <!-- Cabeçalho desktop -->
       <div class="hidden lg:block">
-        <div class="text-2xl font-extrabold">Pagamentos</div>
-        <div class="mt-1 text-[14px] text-ink2">Mensalidades e partidas avulsas</div>
+        <div class="text-[30px] font-extrabold leading-tight">Pagamentos</div>
+        <div class="mt-1 text-[15px] text-ink2">Mensalidades e partidas avulsas</div>
       </div>
 
-      <div class="grid gap-3.5 lg:grid-cols-[1.1fr_1fr] lg:items-start">
-        <div class="flex min-w-0 flex-col gap-3.5">
+      <div class="grid gap-3.5 lg:gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] xl:items-start">
+        <div class="flex min-w-0 flex-col gap-3.5 lg:gap-5">
           <!-- Uma cobrança em aberto por card -->
           <Card v-for="charge in openCharges" :key="charge.id" class="p-4 lg:p-6">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div class="flex items-center gap-2">
-                <SectionLabel>{{ chargeTitle(charge) }}</SectionLabel>
+                <SectionLabel class="lg:text-xs">{{ chargeTitle(charge) }}</SectionLabel>
                 <Badge v-if="charge.batch_kind === 'match'" tone="info">Avulsa</Badge>
               </div>
               <Badge :tone="charge.status === 'overdue' ? 'danger' : 'warn'" dot>
@@ -102,9 +102,9 @@ function statusBadge(charge: Charge): { tone: 'success' | 'warn' | 'danger' | 'n
               </Badge>
             </div>
 
-            <div class="mt-3.5 flex items-center gap-4 lg:mt-5 lg:gap-6">
+            <div class="mt-3.5 flex items-center gap-4 lg:mt-6 lg:gap-7 max-[390px]:gap-3">
               <div
-                class="flex h-[124px] w-[124px] shrink-0 items-center justify-center rounded-[14px] border border-border bg-white p-2 text-center lg:h-[150px] lg:w-[150px]"
+                class="flex h-[124px] w-[124px] shrink-0 items-center justify-center rounded-[14px] border border-border bg-white p-2 text-center lg:h-[176px] lg:w-[176px] max-[390px]:h-[108px] max-[390px]:w-[108px]"
               >
                 <img
                   v-if="charge.pix_qr_code_base64"
@@ -112,26 +112,26 @@ function statusBadge(charge: Charge): { tone: 'success' | 'warn' | 'danger' | 'n
                   alt="QR Code para pagamento via Pix"
                   class="h-full w-full object-contain"
                 />
-                <span v-else class="px-2 text-[11px] leading-snug text-[#8CA094]">QR Code disponível após gerar o Pix</span>
+                <span v-else class="px-2 text-[11px] leading-snug text-[#8CA094] lg:text-[13px]">QR Code disponível após gerar o Pix</span>
               </div>
               <div class="flex flex-1 flex-col gap-1 lg:gap-1.5">
-                <div class="font-condensed text-[34px] font-bold leading-none lg:text-[42px]">{{ formatCents(payableCents(charge)) }}</div>
-                <div class="text-[13px] text-ink2 lg:text-[13.5px]">
+                <div class="font-condensed text-[34px] font-bold leading-none lg:text-[48px] max-[390px]:text-[30px]">{{ formatCents(payableCents(charge)) }}</div>
+                <div class="text-[13px] text-ink2 lg:text-[15px]">
                   Vence <strong :class="charge.status === 'overdue' ? 'text-danger' : 'text-warn'">{{ formatDateShort(charge.due_date) }}</strong>
                   <template v-if="charge.batch_kind === 'monthly'"><br />5º dia útil após a geração</template>
                 </div>
-                <div class="text-[12px] text-ink3 lg:text-[12.5px]">Lembrete no WhatsApp próximo ao vencimento</div>
+                <div class="text-[12px] text-ink3 lg:text-[13px]">Lembrete no WhatsApp próximo ao vencimento</div>
               </div>
             </div>
 
             <div
               v-if="charge.pix_payload"
-              class="mt-3.5 flex items-center gap-2 rounded-xl border border-border bg-surface2 px-3 py-2.5"
+              class="mt-3.5 flex items-center gap-2 rounded-xl border border-border bg-surface2 px-3 py-2.5 lg:mt-6 lg:px-4 lg:py-3"
             >
               <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs text-ink2">
                 {{ charge.pix_payload }}
               </span>
-              <button type="button" class="inline-flex shrink-0 items-center gap-1.5 text-[12.5px] font-bold text-brand" @click="copyPix(charge)">
+              <button type="button" class="inline-flex shrink-0 items-center gap-1.5 text-[12.5px] font-bold text-brand lg:text-[14px]" @click="copyPix(charge)">
                 <NavIcon name="copy" :size="14" :stroke-width="1.9" />
                 {{ copiedFor === charge.id ? 'Copiado!' : 'Copiar' }}
               </button>
@@ -167,23 +167,25 @@ function statusBadge(charge: Charge): { tone: 'success' | 'warn' | 'danger' | 'n
 
         <!-- Histórico -->
         <Card class="min-w-0 p-4 lg:p-6">
-          <SectionLabel>Histórico de pagamentos</SectionLabel>
-          <div class="mt-2.5 flex flex-col">
+          <div class="lg:border-b lg:border-border lg:pb-4">
+            <SectionLabel class="lg:text-xs">Histórico de pagamentos</SectionLabel>
+          </div>
+          <div class="mt-2.5 grid lg:grid-cols-2 lg:gap-x-6 xl:grid-cols-1">
             <div
               v-for="(charge, i) in history"
               :key="charge.id"
-              class="flex items-center gap-3 py-[9px]"
+              class="flex min-w-0 items-center gap-3 py-[9px] lg:gap-4 lg:py-3"
               :class="i < history.length - 1 ? 'border-b border-border' : ''"
             >
               <div
-                class="flex h-[30px] w-[30px] items-center justify-center rounded-full"
+                class="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full lg:h-10 lg:w-10"
                 :class="charge.status === 'paid' || charge.status === 'manual_paid' ? 'bg-brandSoft text-brand' : 'bg-surface2 text-ink3'"
               >
                 <NavIcon name="check" :size="15" :stroke-width="2.4" />
               </div>
-              <div class="flex-1">
-                <div class="text-sm font-semibold">{{ chargeTitle(charge) }}</div>
-                <div class="text-xs text-ink3">
+              <div class="min-w-0 flex-1">
+                <div class="truncate text-sm font-semibold lg:text-[15px]">{{ chargeTitle(charge) }}</div>
+                <div class="truncate text-xs text-ink3 lg:text-[13px]">
                   <template v-if="charge.paid_at">
                     Pago em {{ formatDMY(charge.paid_at.slice(0, 10)) }}
                     · {{ charge.paid_method === 'pix' ? 'PIX' : `registrado por ${charge.registered_by_name}` }}
@@ -191,7 +193,7 @@ function statusBadge(charge: Charge): { tone: 'success' | 'warn' | 'danger' | 'n
                   <template v-else>{{ statusBadge(charge).label }}</template>
                 </div>
               </div>
-              <span class="text-sm font-semibold text-ink2" data-test="history-amount">{{ formatCents(paidCents(charge)) }}</span>
+              <span class="shrink-0 text-sm font-semibold text-ink2 lg:text-[15px]" data-test="history-amount">{{ formatCents(paidCents(charge)) }}</span>
             </div>
             <p v-if="history.length === 0" class="pt-2 text-sm text-ink3">Nenhum pagamento anterior.</p>
           </div>
