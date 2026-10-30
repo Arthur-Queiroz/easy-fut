@@ -58,7 +58,7 @@ const activityIcon = (kind: string) => {
 </script>
 
 <template>
-  <MobileShell>
+  <MobileShell wide>
     <template #header>
       <div class="flex items-center justify-between">
         <div>
@@ -71,42 +71,42 @@ const activityIcon = (kind: string) => {
       </div>
     </template>
 
-    <div class="flex flex-col gap-3.5 px-4 pt-4 lg:px-0 lg:pt-0">
+    <div class="flex flex-col gap-3.5 px-4 pt-4 lg:min-h-[calc(100dvh-3.5rem)] lg:justify-center lg:gap-5 lg:px-0 lg:pt-0">
       <!-- Cabeçalho desktop -->
       <div class="hidden items-baseline justify-between lg:flex">
-        <div class="text-2xl font-extrabold">Fala, {{ auth.firstName }}!</div>
-        <div class="text-[13.5px] text-ink2">{{ formatDateLong(todayISO()) }}</div>
+        <div class="text-2xl font-extrabold lg:text-3xl">Fala, {{ auth.firstName }}!</div>
+        <div class="text-[13.5px] text-ink2 lg:text-[15px]">{{ formatDateLong(todayISO()) }}</div>
       </div>
 
-      <div class="grid gap-3.5 xl:grid-cols-[1.55fr_1fr] xl:items-start">
+      <div class="grid gap-3.5 lg:gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <!-- Próxima partida -->
-        <Card class="p-4 lg:p-6">
-          <div class="flex items-center justify-between">
-            <SectionLabel>Próxima partida</SectionLabel>
-            <Badge v-if="match" :tone="match.status === 'open' ? 'success' : 'info'" dot>
+        <Card class="p-4 lg:p-6 xl:col-start-1 xl:row-start-1">
+          <div class="flex items-center justify-between lg:border-b lg:border-border lg:pb-4">
+            <SectionLabel class="lg:text-xs">Próxima partida</SectionLabel>
+            <Badge v-if="match" :tone="match.status === 'open' ? 'success' : 'info'" dot class="lg:px-3 lg:py-1 lg:text-[13px]">
               {{ match.status === 'open' ? 'Confirmação aberta' : match.status === 'closed' ? 'Confirmação encerrada' : 'Times sorteados' }}
             </Badge>
           </div>
 
           <template v-if="match">
-            <div class="mt-3 flex items-center gap-3.5 lg:mt-4 lg:gap-5">
-              <div class="w-[58px] rounded-xl border border-border bg-surface2 py-[7px] text-center lg:w-[74px]">
-                <div class="text-[11px] font-semibold tracking-[.06em] text-danger">{{ weekdayShort(match.match_date) }}</div>
-                <div class="font-condensed text-[26px] font-bold leading-none text-ink lg:text-[34px]">{{ dayOfMonth(match.match_date) }}</div>
-                <div class="text-[10px] font-medium text-ink3">{{ monthShort(match.match_date) }}</div>
+            <div class="mt-3 flex items-center gap-3.5 lg:mt-5 lg:gap-6">
+              <div class="w-[58px] shrink-0 rounded-xl border border-border bg-surface2 py-[7px] text-center lg:w-[90px] lg:py-3">
+                <div class="text-[11px] font-semibold tracking-[.06em] text-danger lg:text-xs">{{ weekdayShort(match.match_date) }}</div>
+                <div class="font-condensed text-[26px] font-bold leading-none text-ink lg:text-[42px]">{{ dayOfMonth(match.match_date) }}</div>
+                <div class="text-[10px] font-medium text-ink3 lg:text-[11px]">{{ monthShort(match.match_date) }}</div>
               </div>
-              <div class="flex flex-col gap-[3px] lg:gap-1">
-                <div class="text-[17px] font-bold lg:text-xl">{{ formatHour(match.start_time) }} – {{ formatHour(match.end_time) }}</div>
-                <div class="text-[13.5px] text-ink2">{{ match.venue }}</div>
-                <div v-if="match.status === 'open' && countdown(match.confirmation_deadline)" class="flex items-center gap-1.5 text-xs font-semibold text-warn lg:text-[13px]">
+              <div class="flex min-w-0 flex-col gap-[3px] lg:gap-1.5">
+                <div class="text-[17px] font-bold lg:text-2xl">{{ formatHour(match.start_time) }} – {{ formatHour(match.end_time) }}</div>
+                <div class="text-[13.5px] text-ink2 lg:text-[15px]">{{ match.venue }}</div>
+                <div v-if="match.status === 'open' && countdown(match.confirmation_deadline)" class="flex items-center gap-1.5 text-xs font-semibold text-warn lg:text-[14px]">
                   <NavIcon name="clock" :size="13" :stroke-width="2" />
                   Faltam {{ countdown(match.confirmation_deadline) }} para confirmar
                 </div>
               </div>
-              <div v-if="match.status === 'open'" class="ml-auto hidden shrink-0 flex-col gap-2 lg:flex lg:w-[190px]">
+              <div v-if="match.status === 'open'" class="ml-auto hidden shrink-0 flex-col gap-2 lg:flex lg:w-[210px]">
                 <button
                   type="button"
-                  class="flex h-[46px] items-center justify-center gap-2 rounded-xl text-[15px] font-bold transition-all"
+                  class="flex h-[50px] items-center justify-center gap-2 rounded-xl text-[16px] font-bold transition-all"
                   :class="myResponse === 'going' ? 'bg-brand text-brandInk' : 'border-[1.5px] border-border text-ink2'"
                   @click="confirm('going')"
                 >
@@ -115,7 +115,7 @@ const activityIcon = (kind: string) => {
                 </button>
                 <button
                   type="button"
-                  class="flex h-10 items-center justify-center rounded-xl text-[14px] font-semibold transition-all"
+                  class="flex h-[46px] items-center justify-center rounded-xl text-[15px] font-semibold transition-all"
                   :class="myResponse === 'not_going' ? 'bg-danger text-white' : 'border-[1.5px] border-border text-ink2'"
                   @click="confirm('not_going')"
                 >
@@ -124,7 +124,7 @@ const activityIcon = (kind: string) => {
               </div>
             </div>
 
-            <div class="mt-3.5 flex items-center gap-2 lg:mt-4">
+            <div class="mt-3.5 flex items-center gap-2 lg:mt-5 lg:border-t lg:border-border lg:pt-4">
               <div class="flex">
                 <Avatar
                   v-for="(entry, i) in goingAvatars"
@@ -133,11 +133,11 @@ const activityIcon = (kind: string) => {
                   :color="entry.avatar_color"
                   :url="entry.avatar_url"
                   size="xs"
-                  class="border-2 border-surface"
+                  class="border-2 border-surface lg:h-8 lg:w-8 lg:text-xs"
                   :class="i > 0 ? '-ml-2' : ''"
                 />
               </div>
-              <span class="text-[12.5px] font-medium text-ink2">
+              <span class="text-[12.5px] font-medium text-ink2 lg:text-[14px]">
                 <strong class="text-ink">{{ match.going_count }} confirmados</strong>
                 · {{ match.not_going_count }} não vão · {{ match.no_response_count }} sem resposta
               </span>
@@ -181,61 +181,66 @@ const activityIcon = (kind: string) => {
         </Card>
 
         <!-- Mensalidade -->
-        <Card v-if="currentCharge" class="p-4 lg:p-6">
-          <div class="flex items-center justify-between">
-            <SectionLabel>Mensalidade · {{ formatMonth(currentCharge.reference_month).split(' / ')[0] }}</SectionLabel>
-            <Badge :tone="currentCharge.status === 'overdue' ? 'danger' : 'warn'" dot>
+        <Card v-if="currentCharge" class="p-4 lg:flex lg:flex-col lg:p-6 xl:col-start-2 xl:row-start-1">
+          <div class="flex items-center justify-between lg:border-b lg:border-border lg:pb-4">
+            <SectionLabel class="lg:text-xs">Mensalidade · {{ formatMonth(currentCharge.reference_month).split(' / ')[0] }}</SectionLabel>
+            <Badge :tone="currentCharge.status === 'overdue' ? 'danger' : 'warn'" dot class="lg:px-3 lg:py-1 lg:text-[13px]">
               {{ currentCharge.status === 'overdue' ? 'Vencida' : 'Aguardando pagamento' }}
             </Badge>
           </div>
-          <div class="mt-3 flex items-center justify-between lg:mt-4 lg:flex-col lg:items-start lg:gap-4">
+          <div class="mt-3 flex items-center justify-between lg:mt-5 lg:flex-1 lg:flex-col lg:items-start lg:justify-center lg:gap-5">
             <div>
-              <div class="font-condensed text-[30px] font-bold leading-none lg:text-[38px]">{{ formatCents(payableCents(currentCharge)) }}</div>
-              <div class="mt-1 text-[12.5px] text-ink2">Vence {{ formatDateLong(currentCharge.due_date) }}</div>
+              <div class="font-condensed text-[30px] font-bold leading-none lg:text-[42px]">{{ formatCents(payableCents(currentCharge)) }}</div>
+              <div class="mt-1 text-[12.5px] text-ink2 lg:text-[14px]">Vence {{ formatDateLong(currentCharge.due_date) }}</div>
             </div>
             <router-link
               to="/pagamentos"
-              class="flex h-11 items-center gap-2 rounded-xl border-[1.5px] border-brand px-[18px] text-sm font-bold text-brand lg:w-full lg:justify-center"
+              class="flex h-11 items-center gap-2 rounded-xl border-[1.5px] border-brand px-[18px] text-sm font-bold text-brand lg:h-[50px] lg:w-full lg:justify-center lg:text-[15px]"
             >
               <NavIcon name="pix" :size="15" :stroke-width="1.9" />
               Pagar com PIX
             </router-link>
           </div>
         </Card>
-      </div>
-
-      <div class="grid gap-3.5 xl:grid-cols-[1.55fr_1fr] xl:items-start">
         <!-- Atividades recentes -->
-        <Card class="flex flex-col gap-3 p-4 lg:p-6">
-          <SectionLabel>Atividades recentes</SectionLabel>
-          <div v-for="item in activity.slice(0, 6)" :key="item.id" class="flex items-center gap-[11px]">
-            <div
-              class="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px]"
-              :class="activityIcon(item.kind).cls"
-            >
-              <NavIcon :name="activityIcon(item.kind).icon" :size="17" />
+        <Card
+          class="flex min-w-0 flex-col gap-3 p-4 lg:gap-4 lg:p-6 xl:row-start-2"
+          :class="currentCharge ? 'xl:col-start-1' : 'xl:col-span-2'"
+        >
+          <SectionLabel class="lg:border-b lg:border-border lg:pb-4 lg:text-xs">Atividades recentes</SectionLabel>
+          <div class="grid gap-3 lg:gap-4" :class="currentCharge ? '' : 'xl:grid-cols-2 xl:gap-x-8'">
+            <div v-for="item in activity.slice(0, 6)" :key="item.id" class="flex min-w-0 items-center gap-[11px] lg:gap-3 lg:py-1">
+              <div
+                class="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] lg:h-10 lg:w-10"
+                :class="activityIcon(item.kind).cls"
+              >
+                <NavIcon :name="activityIcon(item.kind).icon" :size="17" />
+              </div>
+              <div class="min-w-0 flex-1 text-[13.5px] leading-[1.35] text-ink lg:text-[14px]">{{ item.message }}</div>
+              <span class="shrink-0 text-[11px] text-ink3 lg:text-xs">{{ timeAgo(item.created_at) }}</span>
             </div>
-            <div class="flex-1 text-[13.5px] leading-[1.35] text-ink">{{ item.message }}</div>
-            <span class="text-[11px] text-ink3">{{ timeAgo(item.created_at) }}</span>
           </div>
           <p v-if="activity.length === 0" class="text-sm text-ink3">Nada por aqui ainda.</p>
         </Card>
 
         <!-- Estatísticas da temporada -->
-        <Card class="p-4 lg:p-6">
-          <SectionLabel>Sua temporada</SectionLabel>
-          <div class="mt-3 grid grid-cols-3 gap-3 text-center lg:mt-4">
-            <div>
-              <div class="font-condensed text-[32px] font-bold leading-none lg:text-[30px]">{{ auth.stats?.matches_played ?? 0 }}</div>
-              <div class="mt-1 text-[11px] font-medium tracking-[.04em] text-ink3">PARTIDAS</div>
+        <Card
+          class="p-4 lg:flex lg:flex-col lg:p-6 xl:col-start-2"
+          :class="currentCharge ? 'xl:row-start-2' : 'xl:row-start-1'"
+        >
+          <SectionLabel class="lg:border-b lg:border-border lg:pb-4 lg:text-xs">Sua temporada</SectionLabel>
+          <div class="mt-3 grid grid-cols-3 gap-3 text-center lg:mt-4 xl:flex xl:flex-1 xl:flex-col xl:gap-0 xl:text-left">
+            <div class="xl:flex xl:flex-1 xl:flex-row-reverse xl:items-center xl:justify-between xl:border-b xl:border-border xl:px-1">
+              <div class="font-condensed text-[32px] font-bold leading-none lg:text-[42px]">{{ auth.stats?.matches_played ?? 0 }}</div>
+              <div class="mt-1 text-[11px] font-medium tracking-[.04em] text-ink3 xl:mt-0 xl:text-xs">PARTIDAS</div>
             </div>
-            <div>
-              <div class="font-condensed text-[32px] font-bold leading-none text-brand lg:text-[30px]">{{ auth.stats?.top_scorer_count ?? 0 }}</div>
-              <div class="mt-1 text-[11px] font-medium tracking-[.04em] text-ink3">ARTILHEIRO</div>
+            <div class="xl:flex xl:flex-1 xl:flex-row-reverse xl:items-center xl:justify-between xl:border-b xl:border-border xl:px-1">
+              <div class="font-condensed text-[32px] font-bold leading-none text-brand lg:text-[42px]">{{ auth.stats?.top_scorer_count ?? 0 }}</div>
+              <div class="mt-1 text-[11px] font-medium tracking-[.04em] text-ink3 xl:mt-0 xl:text-xs">ARTILHEIRO</div>
             </div>
-            <div>
-              <div class="font-condensed text-[32px] font-bold leading-none text-warn lg:text-[30px]">{{ auth.stats?.worst_count ?? 0 }}</div>
-              <div class="mt-1 text-[11px] font-medium tracking-[.04em] text-ink3">PERNA DE PAU</div>
+            <div class="xl:flex xl:flex-1 xl:flex-row-reverse xl:items-center xl:justify-between xl:px-1">
+              <div class="font-condensed text-[32px] font-bold leading-none text-warn lg:text-[42px]">{{ auth.stats?.worst_count ?? 0 }}</div>
+              <div class="mt-1 text-[11px] font-medium tracking-[.04em] text-ink3 xl:mt-0 xl:text-xs">PERNA DE PAU</div>
             </div>
           </div>
         </Card>
