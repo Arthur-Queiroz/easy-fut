@@ -33,7 +33,7 @@ async function mountHistory() {
 
 describe('histórico de partidas', () => {
   it('abre a página de detalhes e fotos quando o painel está oculto', async () => {
-    vi.stubGlobal('matchMedia', () => ({ matches: false }))
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(min-width: 1024px)' }))
     const { router, wrapper } = await mountHistory()
     const link = wrapper.get('a[href="/historico/m1"]')
     expect(link.text()).toContain('Ver detalhes e fotos')
@@ -43,7 +43,7 @@ describe('histórico de partidas', () => {
   })
 
   it('mostra o detalhe ao lado em tela larga', async () => {
-    vi.stubGlobal('matchMedia', () => ({ matches: true }))
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query === '(min-width: 1280px)' }))
     const { router, wrapper } = await mountHistory()
     await wrapper.get('a[href="/historico/m1"]').trigger('click')
     await flushPromises()
