@@ -63,5 +63,12 @@ compatível com a PWA anterior (e as migrations precisam ser aditivas).
   ver `.agents/specs/design/2026-10-19-dominio-e-tdd.md`.
 - PWA (`cd pwa`): `npm test` e `npm run build` (type-check + build).
 
-O deploy ocorre pelo GitHub Actions ao fazer merge na `main`. Para CI/CD, use
-o skill `deploy-cicd`; não publique por SSH manualmente.
+## Publicação
+
+- Para mudanças concluídas solicitadas pelo usuário, valide o lado alterado,
+  abra um PR, aguarde os checks e publique por merge na `main` como padrão,
+  sem pedir nova autorização. Respeite pedidos explícitos para manter uma
+  mudança local ou em revisão.
+- Acompanhe o GitHub Actions até confirmar o deploy e o status pós-deploy.
+  Não inclua alterações locais de outras tarefas na publicação.
+- Para CI/CD, use o skill `deploy-cicd`; não publique por SSH manualmente.
