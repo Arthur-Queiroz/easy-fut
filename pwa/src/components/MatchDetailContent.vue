@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, errorMessage } from '../api/client'
-import type { ConfirmationEntry, MatchDetail } from '../api/types'
+import type { ConfirmationEntry, MatchDetail, ProfilePreviewPerson } from '../api/types'
 import { useAuthStore } from '../stores/auth'
 import { formatDateShort, formatTimestamp } from '../lib/format'
 import { safeColor, safeUrl, validateMediaFile } from '../lib/security'
@@ -13,6 +13,7 @@ import Badge from './ui/Badge.vue'
 import Card from './ui/Card.vue'
 import SectionLabel from './ui/SectionLabel.vue'
 import MatchMediaViewer from './MatchMediaViewer.vue'
+import MemberProfileModal from './MemberProfileModal.vue'
 
 const props = defineProps<{ matchId: string }>()
 
@@ -24,6 +25,7 @@ const error = ref('')
 const uploading = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const viewerIndex = ref<number | null>(null)
+const profilePerson = ref<ProfilePreviewPerson | null>(null)
 
 // FUT-005: 3 categorias (best_goal herda regras do top_scorer — pode votar em si)
 const VOTE_CATEGORIES: { key: VoteCategory; label: string; icon: string; selfVote: boolean; warnColor: boolean }[] = [
@@ -159,7 +161,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('pagehide', flushDraft)
   flushDraft()
 })
-watch(() => props.matchId, () => { viewerIndex.value = null; load(); loadDraft() })
+watch(() => props.matchId, () => { viewerIndex.value = null; profilePerson.value = null; load(); loadDraft() })
 
 async function load() {
   if (!props.matchId) return
@@ -171,6 +173,13 @@ const match = computed(() => detail.value?.match ?? null)
 const participants = computed<ConfirmationEntry[]>(
   () => detail.value?.confirmations.filter((c) => c.response === 'going') ?? [],
 )
+
+function openProfile(person: ProfilePreviewPerson) {
+  profilePerson.value = {
+    ...person,
+    kind: person.kind ?? participants.value.find((entry) => entry.user_id === person.user_id)?.kind ?? 'member',
+  }
+}
 const votingOpen = computed(() => match.value?.status === 'voting')
 const canVote = computed(() => votingOpen.value && detail.value?.is_participant)
 
@@ -273,18 +282,21 @@ function resultFor(category: string) {
             {{ cat.resultLabel }}
           </div>
           <template v-if="resultFor(cat.key)?.winners.length">
-            <div
+            <button
               v-for="winner in resultFor(cat.key)!.winners"
               :key="winner.user_id"
-              class="mb-2 flex items-center gap-2.5 rounded-xl border-2 px-3 py-[9px]"
+              type="button"
+              :aria-label="`Ver perfil de ${winner.name}`"
+              class="mb-2 flex w-full min-w-0 items-center gap-2.5 rounded-xl border-2 px-3 py-[9px] text-left hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
               :class="cat.warnColor ? 'border-warn bg-warnBg' : 'border-brand bg-brandSoft'"
+              @click="openProfile(winner)"
             >
               <Avatar :name="winner.name" :color="winner.avatar_color" :url="winner.avatar_url" size="sm" />
-              <span class="flex-1 text-sm font-semibold">{{ winner.name }}</span>
-              <span class="text-[13px] font-bold" :class="cat.warnColor ? 'text-warn' : 'text-brand'">
+              <span class="min-w-0 flex-1 truncate text-sm font-semibold">{{ winner.name }}</span>
+              <span class="shrink-0 text-[13px] font-bold" :class="cat.warnColor ? 'text-warn' : 'text-brand'">
                 {{ winner.votes }} {{ winner.votes === 1 ? 'voto' : 'votos' }}
               </span>
-            </div>
+            </button>
           </template>
           <p v-else class="text-sm text-ink3">Sem votos nesta categoria.</p>
         </Card>
@@ -363,11 +375,11 @@ function resultFor(category: string) {
           <span class="font-condensed text-[15px] font-bold text-brand">{{ participants.length }}</span>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <div v-for="player in participants" :key="player.user_id" class="flex min-w-0 items-center gap-2">
+          <button v-for="player in participants" :key="player.user_id" type="button" :aria-label="`Ver perfil de ${player.name}`" class="flex min-w-0 items-center gap-2 rounded-lg text-left hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" @click="openProfile(player)">
             <Avatar :name="player.name" :color="player.avatar_color" :url="player.avatar_url" size="xs" />
             <span class="truncate text-[13px] font-medium">{{ player.name }}</span>
             <Badge v-if="player.kind === 'guest'" tone="info">Avulso</Badge>
-          </div>
+          </button>
         </div>
       </Card>
 
@@ -382,7 +394,7 @@ function resultFor(category: string) {
             </div>
             <div class="flex flex-wrap items-center gap-x-1 gap-y-1 text-[13px] leading-relaxed text-ink2">
               <span v-for="(m, i) in team.members" :key="m.user_id" class="inline-flex items-center gap-1">
-                {{ m.name.split(' ')[0] }}<Badge v-if="m.kind === 'guest'" tone="info">Avulso</Badge><template v-if="i < team.members.length - 1">,</template>
+                <button type="button" :aria-label="`Ver perfil de ${m.name}`" class="rounded font-medium hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand" @click="openProfile(m)">{{ m.name.split(' ')[0] }}</button><Badge v-if="m.kind === 'guest'" tone="info">Avulso</Badge><template v-if="i < team.members.length - 1">,</template>
               </span>
             </div>
           </div>
@@ -435,6 +447,7 @@ function resultFor(category: string) {
       </Card>
     </div>
     <MatchMediaViewer v-if="viewerIndex !== null && detail.media.length" :media="detail.media" :initial-index="viewerIndex" @close="viewerIndex = null" />
+    <MemberProfileModal :person="profilePerson" @close="profilePerson = null" />
   </div>
   <div v-else class="flex h-full items-center justify-center text-sm text-ink3">
     Carregando…

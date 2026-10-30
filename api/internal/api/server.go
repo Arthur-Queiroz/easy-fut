@@ -89,6 +89,7 @@ func (s *Server) Handler() http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(s.requireAuth, s.requireActive)
 			r.Get("/matches/next", s.handleNextMatch)
+			r.Get("/users/{id}/profile", s.handleMemberProfile)
 			r.Get("/matches", s.handleListMatches)
 			r.Get("/matches/{id}", s.handleGetMatch)
 			r.Post("/matches/{id}/confirm", s.handleConfirm)

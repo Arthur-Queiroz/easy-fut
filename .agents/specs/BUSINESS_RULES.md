@@ -11,6 +11,11 @@ este arquivo no mesmo PR.
   aparece em `avatar_url` e só é servida a membros autenticados. Sem foto,
   o app continua mostrando as iniciais com `avatar_color`.
 
+- Membros ativos podem consultar `GET /users/{id}/profile` para ver nome,
+  foto, papel, data de entrada e estatísticas de outros membros. O perfil
+  público não expõe contato, situação da conta ou dados financeiros. Avulsos
+  não têm perfil público; na partida, aparecem apenas com nome e avatar.
+
 - Sessão por JWT em cookie httpOnly. `requireAuth` recarrega o usuário do
   banco a cada requisição, então inativações valem na hora. Trocar a senha
   incrementa `session_version` e derruba as sessões antigas.
