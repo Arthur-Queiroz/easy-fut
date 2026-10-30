@@ -25,6 +25,24 @@ export interface UserStats {
   worst_count: number
 }
 
+export interface MemberProfile {
+  id: string
+  name: string
+  avatar_color: string
+  avatar_url?: string
+  role: 'admin' | 'player'
+  created_at: string
+  stats: UserStats
+}
+
+export interface ProfilePreviewPerson {
+  user_id: string
+  name: string
+  avatar_color: string
+  avatar_url?: string
+  kind?: UserKind
+}
+
 export interface Invite {
   id: string
   token: string

@@ -77,6 +77,56 @@ describe('fotos e vídeos da partida', () => {
   })
 })
 
+describe('perfil de jogadores na partida', () => {
+  it('abre o perfil pelo participante e mostra a foto ampliada e as estatísticas', async () => {
+    const avatar = '/api/avatars/11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222.jpg'
+    mocks.get.mockImplementation((path: string) => Promise.resolve({ data: path === '/matches/m1' ? detail() : {
+      id: 'u-a', name: 'Ana', avatar_color: '#3B82A0', avatar_url: avatar,
+      role: 'player', created_at: '2026-07-10T12:00:00Z',
+      stats: { matches_played: 7, top_scorer_count: 2, worst_count: 1 },
+    } }))
+    const w = mountC()
+    await flushPromises()
+    await w.get('button[aria-label="Ver perfil de Ana"]').trigger('click')
+    await flushPromises()
+    expect(mocks.get).toHaveBeenCalledWith('/users/u-a/profile')
+    expect(w.text()).toContain('No grupo desde jul/2026')
+    expect(w.text()).toContain('ARTILHEIRO')
+    expect(w.find(`img[src="${avatar}"]`).exists()).toBe(true)
+    w.unmount()
+  })
+
+  it('mostra participante avulso sem consultar perfil de membro', async () => {
+    const d = detail()
+    d.confirmations[1] = { ...d.confirmations[1], kind: 'guest' } as typeof d.confirmations[number]
+    mocks.get.mockResolvedValue({ data: d })
+    const w = mountC()
+    await flushPromises()
+    await w.get('button[aria-label="Ver perfil de Ana"]').trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('Participou como avulso nesta partida.')
+    expect(mocks.get).toHaveBeenCalledTimes(1)
+    w.unmount()
+  })
+
+  it('abre o perfil de quem ganhou destaque no histórico', async () => {
+    const d = detail()
+    d.match.status = 'finished'
+    d.results = [{ category: 'top_scorer', winners: [{ user_id: 'u-a', name: 'Ana', avatar_color: '#3B82A0', votes: 2 }] }] as typeof d.results
+    mocks.get.mockImplementation((path: string) => Promise.resolve({ data: path === '/matches/m1' ? d : {
+      id: 'u-a', name: 'Ana', avatar_color: '#3B82A0', role: 'player', created_at: '2026-07-10T12:00:00Z',
+      stats: { matches_played: 7, top_scorer_count: 2, worst_count: 1 },
+    } }))
+    const w = mountC()
+    await flushPromises()
+    await w.findAll('button[aria-label="Ver perfil de Ana"]')[0].trigger('click')
+    await flushPromises()
+    expect(mocks.get).toHaveBeenCalledWith('/users/u-a/profile')
+    expect(w.text()).toContain('Perfil do jogador')
+    w.unmount()
+  })
+})
+
 const withVotes = (votes: Record<string, string[]>) => {
   const d = detail()
   Object.assign(d.my_votes, votes)

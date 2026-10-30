@@ -35,6 +35,12 @@ export function formatDMY(iso: string): string {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
 }
 
+/** '2026-07-10' → 'jul/2026' */
+export function formatMonthYearShort(iso: string): string {
+  const d = parseISODate(iso)
+  return `${MONTHS_SHORT[d.getMonth()].toLowerCase()}/${d.getFullYear()}`
+}
+
 export function dayOfMonth(iso: string): string {
   return pad(parseISODate(iso).getDate())
 }

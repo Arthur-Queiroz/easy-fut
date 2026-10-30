@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../../api/client'
-import type { NextMatch } from '../../api/types'
+import type { NextMatch, ProfilePreviewPerson } from '../../api/types'
 import { countdown, formatDateLong, formatHour } from '../../lib/format'
 import MobileShell from '../../components/layout/MobileShell.vue'
 import Avatar from '../../components/ui/Avatar.vue'
@@ -10,9 +10,11 @@ import Card from '../../components/ui/Card.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import SectionLabel from '../../components/ui/SectionLabel.vue'
 import MatchDetailContent from '../../components/MatchDetailContent.vue'
+import MemberProfileModal from '../../components/MemberProfileModal.vue'
 
 const route = useRoute()
 const next = ref<NextMatch | null>(null)
+const profilePerson = ref<ProfilePreviewPerson | null>(null)
 
 onMounted(load)
 
@@ -132,7 +134,7 @@ function toggleResponse() {
             <span class="font-condensed text-[15px] font-bold text-brand lg:text-lg">{{ going.length }}</span>
           </div>
           <div class="grid grid-cols-2 gap-2 lg:gap-x-5 lg:gap-y-3 2xl:grid-cols-3">
-            <div v-for="entry in going" :key="entry.user_id" class="flex min-w-0 items-center gap-2 lg:gap-3">
+            <button v-for="entry in going" :key="entry.user_id" type="button" :aria-label="`Ver perfil de ${entry.name}`" class="flex min-w-0 items-center gap-2 rounded-lg text-left hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand lg:gap-3" @click="profilePerson = entry">
               <Avatar :name="entry.name" :color="entry.avatar_color" :url="entry.avatar_url" size="xs" class="lg:h-8 lg:w-8 lg:text-xs" />
               <span class="truncate text-[13px] font-medium lg:text-[14px]">
                 {{ entry.name }}
@@ -141,7 +143,7 @@ function toggleResponse() {
                   class="rounded-md bg-infoBg px-1.5 py-px text-[10px] font-semibold text-info"
                 >ADMIN</span>
               </span>
-            </div>
+            </button>
           </div>
           <p v-if="going.length === 0" class="text-sm text-ink3">Ninguém confirmou ainda.</p>
         </Card>
@@ -154,10 +156,10 @@ function toggleResponse() {
               <span class="font-condensed text-[15px] font-bold text-danger lg:text-lg">{{ notGoing.length }}</span>
             </div>
             <div class="flex flex-col gap-[7px] lg:gap-3">
-              <div v-for="entry in notGoing" :key="entry.user_id" class="flex min-w-0 items-center gap-2 opacity-75 lg:gap-3">
-                <Avatar :name="entry.name" color="#8CA094" size="xs" class="lg:h-8 lg:w-8 lg:text-xs" />
+              <button v-for="entry in notGoing" :key="entry.user_id" type="button" :aria-label="`Ver perfil de ${entry.name}`" class="flex min-w-0 items-center gap-2 rounded-lg text-left opacity-75 hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand lg:gap-3" @click="profilePerson = entry">
+                <Avatar :name="entry.name" :color="entry.avatar_color" :url="entry.avatar_url" size="xs" class="lg:h-8 lg:w-8 lg:text-xs" />
                 <span class="truncate text-[12.5px] font-medium lg:text-[14px]">{{ entry.name }}</span>
-              </div>
+              </button>
             </div>
             <p v-if="notGoing.length === 0" class="text-sm text-ink3">Ninguém recusou ainda.</p>
           </Card>
@@ -167,10 +169,10 @@ function toggleResponse() {
               <span class="font-condensed text-[15px] font-bold text-warn lg:text-lg">{{ noResponse.length }}</span>
             </div>
             <div class="grid gap-y-[7px] lg:grid-cols-3 lg:gap-x-5 lg:gap-y-3 xl:grid-cols-4">
-              <div v-for="entry in noResponse" :key="entry.user_id" class="flex min-w-0 items-center gap-2 text-ink2 lg:gap-3">
-                <Avatar :name="entry.name" color="#8CA094" size="xs" class="lg:h-8 lg:w-8 lg:text-xs" />
+              <button v-for="entry in noResponse" :key="entry.user_id" type="button" :aria-label="`Ver perfil de ${entry.name}`" class="flex min-w-0 items-center gap-2 rounded-lg text-left text-ink2 hover:text-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand lg:gap-3" @click="profilePerson = entry">
+                <Avatar :name="entry.name" :color="entry.avatar_color" :url="entry.avatar_url" size="xs" class="lg:h-8 lg:w-8 lg:text-xs" />
                 <span class="truncate text-[12.5px] font-medium lg:text-[14px]">{{ entry.name }}</span>
-              </div>
+              </button>
             </div>
             <p v-if="noResponse.length === 0" class="text-sm text-ink3">Todos já responderam.</p>
           </div>
@@ -188,5 +190,6 @@ function toggleResponse() {
     </div>
 
     <EmptyState v-else>Nenhuma partida agendada. Aguarde o administrador abrir a próxima.</EmptyState>
+    <MemberProfileModal :person="profilePerson" @close="profilePerson = null" />
   </MobileShell>
 </template>
