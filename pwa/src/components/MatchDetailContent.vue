@@ -27,11 +27,11 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const viewerIndex = ref<number | null>(null)
 const profilePerson = ref<ProfilePreviewPerson | null>(null)
 
-// FUT-005: 3 categorias (best_goal herda regras do top_scorer — pode votar em si)
-const VOTE_CATEGORIES: { key: VoteCategory; label: string; icon: string; selfVote: boolean; warnColor: boolean }[] = [
-  { key: 'top_scorer', label: 'Vote no artilheiro', icon: 'trophy', selfVote: true, warnColor: false },
-  { key: 'worst_player', label: 'Vote no perna de pau', icon: '', selfVote: false, warnColor: true },
-  { key: 'best_goal', label: 'Vote no melhor gol', icon: 'ball', selfVote: true, warnColor: false },
+// FUT-005: 3 categorias (best_goal permite só 1 voto — diferente das demais)
+const VOTE_CATEGORIES: { key: VoteCategory; label: string; icon: string; selfVote: boolean; warnColor: boolean; maxVotes: number }[] = [
+  { key: 'top_scorer', label: 'Vote no artilheiro', icon: 'trophy', selfVote: true, warnColor: false, maxVotes: 2 },
+  { key: 'worst_player', label: 'Vote no perna de pau', icon: '', selfVote: false, warnColor: true, maxVotes: 2 },
+  { key: 'best_goal', label: 'Vote no melhor gol', icon: 'ball', selfVote: true, warnColor: false, maxVotes: 1 },
 ]
 const CATEGORY_KEYS = VOTE_CATEGORIES.map((c) => c.key)
 
@@ -93,12 +93,16 @@ const draftIsDirty = computed(() => Object.keys(changedVotes.value).length > 0)
 
 function toggleMark(category: VoteCategory, candidateId: string) {
   if (!canVote.value) return
+  const cat = VOTE_CATEGORIES.find((c) => c.key === category)!
   const cur = [...(draft.value[category] ?? persisted.value[category] ?? [])]
   const idx = cur.indexOf(candidateId)
   if (idx >= 0) cur.splice(idx, 1)
   else {
-    if (cur.length >= 2) {
-      error.value = 'Escolha no máximo 2 jogadores. Desmarque um para trocar.'
+    if (cur.length >= cat.maxVotes) {
+      error.value =
+        cat.maxVotes === 1
+          ? 'Nesta categoria você escolhe apenas 1 jogador. Desmarque para trocar.'
+          : 'Escolha no máximo 2 jogadores. Desmarque um para trocar.'
       return
     }
     cur.push(candidateId)
@@ -314,7 +318,7 @@ function resultFor(category: string) {
               {{ cat.label }}
             </span>
             <span class="text-[11.5px] font-medium text-ink3">
-              {{ marks[cat.key].length }}/2 votos<template v-if="!cat.selfVote"> · sem voto em si mesmo</template>
+              {{ marks[cat.key].length }}/{{ cat.maxVotes }} {{ cat.maxVotes === 1 ? 'voto' : 'votos' }}<template v-if="!cat.selfVote"> · sem voto em si mesmo</template>
             </span>
           </div>
           <div class="flex flex-col gap-2">

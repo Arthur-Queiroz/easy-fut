@@ -27,8 +27,17 @@ const (
 var Categories = []Category{TopScorer, WorstPlayer, BestGoal}
 
 // MaxVotesPerCategory é quantos jogadores distintos cada participante pode
-// votar em uma categoria.
+// votar em uma categoria. best_goal é exceção: apenas 1 voto (o gol da
+// partida é único — decisão do Arthur em 2026-10-25).
 const MaxVotesPerCategory = 2
+
+// MaxVotesFor devolve o limite por categoria (2 votos; 1 no melhor gol).
+func MaxVotesFor(c Category) int {
+	if c == BestGoal {
+		return 1
+	}
+	return MaxVotesPerCategory
+}
 
 var (
 	ErrInvalidCategory = errors.New("categoria inválida")
@@ -36,8 +45,16 @@ var (
 	ErrNotParticipant  = errors.New("somente quem participou da partida pode votar e receber votos")
 	ErrSelfWorstVote   = errors.New("não vale votar em si mesmo nessa categoria")
 	ErrDuplicateVote   = errors.New("você já votou neste jogador nesta categoria")
-	ErrVoteLimit       = fmt.Errorf("você já usou seus %d votos nesta categoria", MaxVotesPerCategory)
+	// ErrVoteLimit é o sentinel; a mensagem exibida vem de VoteLimitError,
+	// que envolve este erro com o número correto da categoria (2 ou 1).
+	ErrVoteLimit = errors.New("limite de votos da categoria atingido")
 )
+
+// VoteLimitError devolve o erro de limite com a mensagem com o número correto
+// da categoria (2 votos; 1 no melhor gol) e wrap no sentinel ErrVoteLimit.
+func VoteLimitError(c Category) error {
+	return fmt.Errorf("%w: você já usou seu(s) %d voto(s) nesta categoria", ErrVoteLimit, MaxVotesFor(c))
+}
 
 func ParseCategory(raw string) (Category, error) {
 	if c := Category(raw); slices.Contains(Categories, c) {
@@ -98,8 +115,8 @@ func (b Ballot) Validate() error {
 	if slices.Contains(b.PreviousVotes, b.CandidateID) {
 		return ErrDuplicateVote
 	}
-	if len(b.PreviousVotes) >= MaxVotesPerCategory {
-		return ErrVoteLimit
+	if len(b.PreviousVotes) >= MaxVotesFor(b.Category) {
+		return VoteLimitError(b.Category)
 	}
 	return nil
 }
