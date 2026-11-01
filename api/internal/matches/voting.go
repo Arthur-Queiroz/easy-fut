@@ -57,7 +57,7 @@ func VoteLimitError(c Category) error {
 	if n == MaxVotesPerCategory {
 		return ErrVoteLimit
 	}
-	return fmt.Errorf("%w Sendo %s, vale %d voto.", ErrVoteLimit, c.Label(), n)
+	return fmt.Errorf("%w (melhor gol vale apenas %d voto)", ErrVoteLimit, n)
 }
 
 func ParseCategory(raw string) (Category, error) {

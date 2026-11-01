@@ -44,7 +44,7 @@ func TestWriteStoreErrorVotingContract(t *testing.T) {
 	if got := matches.VoteLimitError(matches.TopScorer).Error(); got != "você já usou seu(s) 2 voto(s) nesta categoria" {
 		t.Errorf("mensagem do limite (2 votos) mudou: %q", got)
 	}
-	if got := matches.VoteLimitError(matches.BestGoal).Error(); got != "você já usou seu(s) 2 voto(s) nesta categoria Sendo melhor gol, vale 1 voto." {
+	if got := matches.VoteLimitError(matches.BestGoal).Error(); got != "você já usou seu(s) 2 voto(s) nesta categoria (melhor gol vale apenas 1 voto)" {
 		t.Errorf("mensagem do limite (1 voto) mudou: %q", got)
 	}
 }
