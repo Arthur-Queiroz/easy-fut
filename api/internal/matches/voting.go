@@ -47,13 +47,17 @@ var (
 	ErrDuplicateVote   = errors.New("você já votou neste jogador nesta categoria")
 	// ErrVoteLimit é o sentinel; a mensagem exibida vem de VoteLimitError,
 	// que envolve este erro com o número correto da categoria (2 ou 1).
-	ErrVoteLimit = errors.New("limite de votos da categoria atingido")
+	ErrVoteLimit = errors.New("você já usou seu(s) 2 voto(s) nesta categoria")
 )
 
-// VoteLimitError devolve o erro de limite com a mensagem com o número correto
-// da categoria (2 votos; 1 no melhor gol) e wrap no sentinel ErrVoteLimit.
+// VoteLimitError envolve o sentinel com o número correto da categoria
+// (2 votos; 1 no melhor gol). O texto do sentinel cobre o caso comum (2).
 func VoteLimitError(c Category) error {
-	return fmt.Errorf("%w: você já usou seu(s) %d voto(s) nesta categoria", ErrVoteLimit, MaxVotesFor(c))
+	n := MaxVotesFor(c)
+	if n == MaxVotesPerCategory {
+		return ErrVoteLimit
+	}
+	return fmt.Errorf("%w Sendo %s, vale %d voto.", ErrVoteLimit, c.Label(), n)
 }
 
 func ParseCategory(raw string) (Category, error) {

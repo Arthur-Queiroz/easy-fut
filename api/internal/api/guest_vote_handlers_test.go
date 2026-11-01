@@ -270,7 +270,7 @@ func TestGuestVotePut(t *testing.T) {
 		status int
 		msg    string
 	}{
-		{"três votos na categoria", `{"votes":{"top_scorer":` + votes(f.player, f.admin, f.guest.UserID) + `}}`, http.StatusConflict, "você já usou seus 2 votos nesta categoria"},
+		{"três votos na categoria", `{"votes":{"top_scorer":` + votes(f.player, f.admin, f.guest.UserID) + `}}`, http.StatusConflict, "você já usou seu(s) 2 voto(s) nesta categoria"},
 		{"perna de pau em si mesmo", `{"votes":{"worst_player":` + votes(f.guest.UserID) + `}}`, http.StatusBadRequest, "não vale votar em si mesmo nessa categoria"},
 		{"candidato que não foi", `{"votes":{"top_scorer":` + votes(f.absent) + `}}`, http.StatusForbidden, "somente quem participou da partida pode votar e receber votos"},
 		{"categoria inválida", `{"votes":{"goleiro":` + votes(f.player) + `}}`, http.StatusBadRequest, "categoria inválida"},
