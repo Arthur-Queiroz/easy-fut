@@ -37,8 +37,13 @@ func TestWriteStoreErrorVotingContract(t *testing.T) {
 			t.Errorf("%v: %d %q, want %d com a mensagem do domínio", tc.err, rec.Code, body.Error, tc.status)
 		}
 	}
-	if got := matches.ErrVoteLimit.Error(); got != "você já usou seus 2 votos nesta categoria" {
-		t.Errorf("mensagem do limite mudou: %q", got)
+	// O sentinel ErrVoteLimit carrega o texto padrão (2 votos) e é casado por
+	// errors.Is; VoteLimitError ajusta o texto para as categorias de 1 voto.
+	if got := matches.VoteLimitError(matches.TopScorer).Error(); got != "você já usou seu(s) 2 voto(s) nesta categoria" {
+		t.Errorf("mensagem do limite (2 votos) mudou: %q", got)
+	}
+	if got := matches.VoteLimitError(matches.BestGoal).Error(); got != "você já usou seu(s) 2 voto(s) nesta categoria Sendo melhor gol, vale 1 voto." {
+		t.Errorf("mensagem do limite (1 voto) mudou: %q", got)
 	}
 }
 

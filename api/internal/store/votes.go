@@ -126,6 +126,11 @@ func (s *Store) ReplaceVotes(ctx context.Context, matchID, voterID string, votes
 			if slices.Contains(previous, candidate) {
 				continue
 			}
+			// Limite por categoria (best_goal = 1; demais = 2): as mensagens
+			// das duas regras valem para as duas fontes (PUT normal e avulso).
+			if len(previous) >= matches.MaxVotesFor(category) {
+				return matches.VoteLimitError(category)
+			}
 			if err := insertVote(ctx, tx, matchID, voterID, string(category), candidate); err != nil {
 				return err
 			}
