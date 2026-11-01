@@ -38,7 +38,8 @@ func TestBallotValidate(t *testing.T) {
 		{"perna de pau em si mesmo", func(b *Ballot) { b.Category, b.CandidateID = WorstPlayer, ana }, ErrSelfWorstVote},
 		{"artilheiro em si mesmo vale", func(b *Ballot) { b.CandidateID = ana }, nil},
 		{"melhor gol em si mesmo vale", func(b *Ballot) { b.Category, b.CandidateID = BestGoal, ana }, nil},
-		{"melhor gol também tem limite", func(b *Ballot) { b.Category, b.PreviousVotes = BestGoal, []string{cai, dav} }, ErrVoteLimit},
+		{"melhor gol: segundo voto é bloqueado", func(b *Ballot) { b.Category, b.PreviousVotes = BestGoal, []string{cai} }, ErrVoteLimit},
+		{"melhor gol: terceiro voto também", func(b *Ballot) { b.Category, b.PreviousVotes = BestGoal, []string{cai, dav} }, ErrVoteLimit},
 		{"mesmo jogador de novo", func(b *Ballot) { b.PreviousVotes = []string{bia} }, ErrDuplicateVote},
 		{"segundo voto vale", func(b *Ballot) { b.PreviousVotes = []string{cai} }, nil},
 		{"terceiro voto", func(b *Ballot) { b.PreviousVotes = []string{cai, dav} }, ErrVoteLimit},
@@ -134,7 +135,8 @@ func TestSubmissionValidate(t *testing.T) {
 		{"três na mesma categoria", func(s *Submission) { s.Votes[BestGoal] = []string{bia, cai, dav} }, ErrVoteLimit},
 		{"mesmo jogador duas vezes", func(s *Submission) { s.Votes[TopScorer] = []string{bia, bia} }, ErrDuplicateVote},
 		{"perna de pau em si mesmo", func(s *Submission) { s.Votes[WorstPlayer] = []string{ana} }, ErrSelfWorstVote},
-		{"melhor gol em si mesmo vale", func(s *Submission) { s.Votes[BestGoal] = []string{ana, bia} }, nil},
+		{"melhor gol: 2 candidatos bloqueado", func(s *Submission) { s.Votes[BestGoal] = []string{bia, cai} }, ErrVoteLimit},
+		{"melhor gol: 1 candidato vale", func(s *Submission) { s.Votes[BestGoal] = []string{bia} }, nil},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
