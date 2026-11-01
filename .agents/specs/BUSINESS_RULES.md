@@ -88,14 +88,16 @@ Estados (`matches.status`):
 Código: `api/internal/matches/voting.go` (`Ballot.Validate`).
 
 Categorias: `top_scorer` (artilheiro), `worst_player` (perna de pau) e
-`best_goal` (melhor gol, FUT-005, mesmas regras do artilheiro).
+`best_goal` (melhor gol, FUT-005).
 
 - Só vota e só recebe voto quem participou da partida (confirmou `going`).
-- Até 2 votos por categoria, em jogadores distintos; o voto pode ser
-  desfeito enquanto a votação estiver aberta. O limite vale também com
-  envios simultâneos: as gravações de um eleitor numa partida são
+- Até 2 votos por categoria, em jogadores distintos — **exceto `best_goal`,
+  que aceita apenas 1 voto** (PR #33, 2026-11-01: `matches.MaxVotesFor`).
+  O voto pode ser desfeito enquanto a votação estiver aberta. O limite vale
+  também com envios simultâneos: as gravações de um eleitor numa partida são
   serializadas por lock (`lockVoter` em `store/votes.go`).
-- Não vale votar em si mesmo como `worst_player`.
+- Vale votar em si mesmo como `top_scorer` e `best_goal`; não vale como
+  `worst_player`.
 - Empate na apuração devolve mais de um vencedor. A apuração só é exposta
   depois de `finished`.
 - A PWA monta um rascunho e, ao tocar em "Enviar votos" (FUT-003), manda
